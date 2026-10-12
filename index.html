@@ -271,7 +271,8 @@ async function refreshRoom(isFirstLoad = false){
     const targetTag = q.target_nickname ? `<span class="pill" style="background:#4a1e4a;margin-bottom:6px">🎯 Dirigido a: ${safe(q.target_nickname)}</span><br>` : '';
     const cardUsedTag = q.applied_card ? `<span class="pill" style="background:#1e3a4a;color:var(--cyan);margin-bottom:6px">🛡️ Carta aplicada: ${safe(q.applied_card)}</span><br>` : '';
     
-    const isClaimed = q.reward_claimed === true;
+    // Verificamos estrictamente el booleano guardado en Supabase
+    const isClaimed = q.reward_claimed === true || q.reward_claimed === "true";
 
     let cardButtonsHtml = '';
     if(!isClaimed && myCards.length > 0) {
@@ -407,7 +408,7 @@ window.confirmReward = async function(questionId){
     const {data: qData} = await supabase.from("game_questions").select("*").eq("id", questionId).single();
     if(!qData) throw new Error("Publicación no encontrada");
     
-    if(qData.reward_claimed === true) {
+    if(qData.reward_claimed === true || qData.reward_claimed === "true") {
       alert("¡Esta recompensa ya fue procesada!");
       refreshRoom(false);
       return;
@@ -429,8 +430,12 @@ window.confirmReward = async function(questionId){
 
     const newCoins = currentCoins + premio;
 
+    // Actualizamos primero las monedas del miembro
     await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", targetId);
-    await supabase.from("game_questions").update({reward_claimed: true, applied_card: (qData.applied_card || "") + " ✔️ Cumplido"}).eq("id", questionId);
+    
+    // Forzamos la actualización inmediata a true en la base de datos
+    const {error: errUpd} = await supabase.from("game_questions").update({reward_claimed: true, applied_card: (qData.applied_card || "") + " ✔️ Cumplido"}).eq("id", questionId);
+    if(errUpd) throw errUpd;
 
     showToast(`¡Cumplido! Se otorgaron ${premio} monedas.`);
     await refreshRoom(false);
@@ -446,7 +451,7 @@ window.confirmFail = async function(questionId){
     const {data: qData} = await supabase.from("game_questions").select("*").eq("id", questionId).single();
     if(!qData) throw new Error("Publicación no encontrada");
 
-    if(qData.reward_claimed === true) {
+    if(qData.reward_claimed === true || qData.reward_claimed === "true") {
       alert("¡Esta publicación ya fue procesada!");
       refreshRoom(false);
       return;
@@ -469,7 +474,10 @@ window.confirmFail = async function(questionId){
     }
 
     await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", targetId);
-    await supabase.from("game_questions").update({reward_claimed: true, applied_card: "❌ No cumplió (-10🪙)"}).eq("id", questionId);
+    
+    // Forzamos la actualización inmediata a true en la base de datos
+    const {error: errUpd} = await supabase.from("game_questions").update({reward_claimed: true, applied_card: "❌ No cumplió (-10🪙)"}).eq("id", questionId);
+    if(errUpd) throw errUpd;
 
     showToast("Se restaron 10 monedas por incumplimiento.");
     await refreshRoom(false);
