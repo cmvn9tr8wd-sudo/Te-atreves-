@@ -311,7 +311,6 @@ window.switchTab = function(tabId, btnElement) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// Función para alternar subpestañas dentro de las salas activas
 window.switchSubTab = function(roomId, subTabName, btnElement) {
   const container = $(`room-content-${roomId}`);
   if(!container) return;
@@ -596,6 +595,7 @@ async function openRoom(id,code,name){
      <div class="sub-tabs">
        <button class="sub-tab-btn active" onclick="window.switchSubTab('${id}', 'subtab-muro', this)">💥 Muro de Retos</button>
        <button class="sub-tab-btn" onclick="window.switchSubTab('${id}', 'subtab-minigames', this)">🎮 Mini Juegos</button>
+       <button class="sub-tab-btn" onclick="window.switchSubTab('${id}', 'subtab-duel', this)">⚡ Duelo 1v1</button>
      </div>
 
      <div id="room-content-${id}">
@@ -628,7 +628,7 @@ async function openRoom(id,code,name){
            <option value="">✨ Escribir mi propio texto (Libre)...</option>
            <option value="¿Cuál ha sido el momento más vergonzoso de tu vida?">❓ ¿Cuál ha sido el momento más vergonzoso de tu vida?</option>
            <option value="Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?">❓ Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?</option>
-           <option value="¿Cuál es el secreto más grande que le has ocultado a tus padres?">❓ ¿Cuál es el secreto más grande que le has ocultado a tus padres?</option>
+           <option value="¿Cuál es el secreto más grande que le has ocultado a tus padres?">❓ ¿Cuál es el secreto más grande que le has ocultado à tus padres?</option>
            <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">❓ Si tuvieras que casarte con alguien de este grupo, ¿quién sería?</option>
            <option value="¿Cuál ha sido tu peor cita en la vida real?">❓ ¿Cuál ha sido tu peor cita en la vida real?</option>
            <option value="¿Qué es lo más extraño que has comprado en internet a las 3 AM?">❓ ¿Qué es lo más extraño que has comprado en internet a las 3 AM?</option>
@@ -670,6 +670,21 @@ async function openRoom(id,code,name){
            <button style="width:100%;max-width:280px" onclick="window.spinWheel('${id}')">🎲 ¡Girar Ruleta!</button>
          </div>
        </div>
+
+       <!-- SUBPESTAÑA 3: DUELO 1V1 EN VIVO -->
+       <div id="subtab-duel-${id}" class="sub-tab-content">
+         <div class="card" style="background:#15102d;margin-top:10px;text-align:center">
+           <h3>⚡ Duelo de Reflejos 1v1</h3>
+           <p class="muted" style="font-size:0.85rem">El primero en presionar el botón cuando aparezca <strong>¡YA!</strong> gana 🪙 30 monedas del bote en vivo.</p>
+           
+           <div id="duelStatus-${id}" class="status" style="margin:15px 0;font-size:1rem;color:var(--cyan)">Pulsa "Iniciar Duelo" para comenzar la cuenta regresiva.</div>
+           
+           <button id="startDuelBtn-${id}" style="width:100%;max-width:280px;background:linear-gradient(100deg,#f59e0b,#ef4444);color:#fff" onclick="window.startDuel('${id}')">⚔️ Iniciar Duelo</button>
+           
+           <button id="duelClickBtn-${id}" class="hidden" style="width:100%;max-width:280px;height:120px;font-size:1.8rem;background:#10b981;color:#fff;margin:15px auto;border-radius:20px;animation:neonGlow 1s infinite alternate" onclick="window.hitDuel('${id}')">💥 ¡PÚCHALE!</button>
+         </div>
+       </div>
+
      </div>
 
    </div>
@@ -688,7 +703,7 @@ async function openRoom(id,code,name){
  const timer = setInterval(() => refreshRoom(id, false), 12000);
 
  activeRooms[id] = {
-   id, code, name, channel, timer, lastCount: 0, targetUser: null, selectedStickerUrl: null
+   id, code, name, channel, timer, lastCount: 0, targetUser: null, selectedStickerUrl: null, duelActive: false
  };
 
  window.switchTab(tabId, newBtn);
@@ -696,7 +711,56 @@ async function openRoom(id,code,name){
  await refreshRoom(id, true);
 }
 
-// Ejemplo de función para el mini juego de la ruleta
+// Funciones para el Duelo 1v1 en Vivo
+window.startDuel = async function(roomId){
+  playSuccessSound();
+  const statusEl = $(`duelStatus-${roomId}`);
+  const startBtn = $(`startDuelBtn-${roomId}`);
+  const clickBtn = $(`duelClickBtn-${roomId}`);
+  
+  startBtn.classList.add("hidden");
+  statusEl.textContent = "Preparándonos... ¡Atentos!";
+  statusEl.style.color = "var(--gold)";
+
+  const delay = Math.floor(Math.random() * 3000) + 2000; // de 2 a 5 segundos aleatorios
+
+  setTimeout(() => {
+    activeRooms[roomId].duelActive = true;
+    statusEl.textContent = "🔥 ¡YA! ¡PRESIONA RÁPIDO!";
+    statusEl.style.color = "var(--good)";
+    clickBtn.classList.remove("hidden");
+    if(navigator.vibrate) navigator.vibrate(300);
+  }, delay);
+};
+
+window.hitDuel = async function(roomId){
+  const rObj = activeRooms[roomId];
+  if(!rObj || !rObj.duelActive) return;
+  
+  rObj.duelActive = false; // Bloquear para que solo uno gane
+  const clickBtn = $(`duelClickBtn-${roomId}`);
+  const startBtn = $(`startDuelBtn-${roomId}`);
+  const statusEl = $(`duelStatus-${roomId}`);
+  
+  clickBtn.classList.add("hidden");
+  startBtn.classList.remove("hidden");
+  
+  playSuccessSound();
+  statusEl.textContent = `🎉 ¡${profile.name} ganó el duelo y se lleva 🪙 30 monedas!`;
+  statusEl.style.color = "var(--pink)";
+  showToast(`¡Ganaste el duelo! Recompensa otorgada.`);
+
+  try {
+    const {data: curMem} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
+    const currentCoins = curMem ? (curMem.coins || 50) : profile.coins;
+    const newCoins = currentCoins + 30;
+    await supabase.from("game_members").update({coins: newCoins}).eq("room_id", roomId).eq("user_id", user.id);
+    refreshRoom(roomId, false);
+  } catch(e) {
+    console.error(e);
+  }
+};
+
 window.spinWheel = async function(roomId){
   playSuccessSound();
   const outcomes = [
