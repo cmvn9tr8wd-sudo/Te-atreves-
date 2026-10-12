@@ -188,15 +188,67 @@ function getVipTitle() {
   } catch(e) { return "👑 VIP ⚡"; }
 }
 
-// SINTETIZADOR DE SONIDO VIP (Efecto especial infalible en navegador)
+// SINTETIZADORES DE SONIDO INTEGRADOS
 function playVipSound() {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nota D5
-    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // Sube a A5
+    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+  } catch(e) {}
+}
+
+function playSuccessSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.12);
+    osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.24);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.4);
+  } catch(e) {}
+}
+
+function playFailSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.35);
+  } catch(e) {}
+}
+
+function playCardSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.2);
     gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
     osc.connect(gain);
@@ -365,7 +417,6 @@ async function refreshRoom(isFirstLoad = false){
     
     const isClaimed = q.reward_claimed === true || q.reward_claimed === "true" || processedLocally.has(q.id);
 
-    // Aplicar efectos visuales dinámicos si el autor es VIP
     let authorDisplay = safe(q.nickname);
     if(authorDisplay.includes("VIP")) {
       authorDisplay = `<span class="vip-animated-name">${authorDisplay} <span class="vip-emoji">🔥</span></span>`;
@@ -484,6 +535,9 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
   if(!currentRoom || !user) { alert("Entra primero a una sala."); return; }
   if(!confirm(`¿Usar la carta "${cardName}" en esta publicación?`)) return;
 
+  // SONIDO DE CARTA DE SALVACIÓN
+  playCardSound();
+
   try {
     const {data: qData} = await supabase.from("game_questions").select("*").eq("id", questionId).single();
     if(!qData) throw new Error("Publicación no encontrada");
@@ -520,6 +574,9 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
 };
 
 window.confirmReward = async function(questionId){
+  // SONIDO DE CUMPLIDO
+  playSuccessSound();
+
   processedLocally.add(questionId);
   saveProcessedLocal();
 
@@ -562,6 +619,9 @@ window.confirmReward = async function(questionId){
 window.confirmFail = async function(questionId){
   if(!confirm("¿Confirmas que NO cumplió? Se le restarán 10 monedas (permite saldo negativo).")) return;
   
+  // SONIDO DE FALLO
+  playFailSound();
+
   processedLocally.add(questionId);
   saveProcessedLocal();
 
