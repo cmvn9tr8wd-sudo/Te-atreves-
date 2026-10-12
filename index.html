@@ -21,11 +21,17 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 .comment-box{background:#15102d;border-radius:8px;padding:6px 10px;margin-top:6px;font-size:0.85rem;border-left:2px solid var(--cyan);display:flex;align-items:center;gap:6px}
 .comment-box img{width:20px;height:20px;border-radius:50%}
 .post-img{width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-top:8px}
+
+.sticker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:8px}
+.sticker-item{background:#120c24;border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;cursor:pointer;transition:transform .15s}
+.sticker-item:hover{transform:scale(1.05);border-color:var(--pink)}
+.sticker-item img{width:56px;height:56px;object-fit:contain}
+.chat-sticker{max-width:90px;max-height:90px;object-fit:contain;margin-top:4px}
+
 #toastContainer{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;width:92%;max-width:380px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast{background:linear-gradient(135deg,#3b236b,#1e133c);border:1px solid var(--pink);color:var(--text);padding:12px 14px;border-radius:12px;box-shadow:0 6px 24px #0006;pointer-events:auto;animation:slideDown .25s ease;font-size:0.9rem}
 @keyframes slideDown{from{opacity:0;transform:translateY(-15px)}to{opacity:1;transform:translateY(0)}}
 
-/* EFECTOS VIP NEÓN Y ANIMACIONES */
 @keyframes neonGlow {
   0% { text-shadow: 0 0 5px #ff4fb8, 0 0 10px #ff4fb8, 0 0 20px #67e8f9; }
   50% { text-shadow: 0 0 10px #67e8f9, 0 0 20px #ff4fb8, 0 0 30px #a78bfa; }
@@ -49,7 +55,7 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 <body>
 <div id="toastContainer"></div>
 <main>
-<header class="brand"><div class="logo">¿TE ATREVES?</div><div class="tag">Retos directos, cartas y estatus VIP con efectos 🔥</div></header>
+<header class="brand"><div class="logo">¿TE ATREVES?</div><div class="tag">Retos, cartas, estatus VIP y stickers virales 🔥</div></header>
 
 <nav class="nav-tabs">
   <button class="tab-btn active" onclick="window.switchTab('tab-profile', this)">👤 Perfil</button>
@@ -64,6 +70,19 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 <label>Tu apodo</label><input id="nickname" maxlength="20" placeholder="Ej. GatoCósmico">
 <label>Elige tu avatar original</label><div id="avatarChoices" class="avatars"></div>
 </div>
+
+<div class="card">
+  <h3>🖼️ Mis Stickers Desbloqueados (Listos para WhatsApp)</h3>
+  <p class="muted" style="font-size:0.85rem">Toca cualquier sticker de tu colección para descargarlo directamente a tu celular.</p>
+  <div id="myStickersCollection" class="sticker-grid"><p class="muted">No tienes stickers en tu colección aún.</p></div>
+</div>
+
+<div class="card">
+  <h3>✨ Tienda de Stickers Exclusivos (🪙 30 c/u)</h3>
+  <p class="muted" style="font-size:0.85rem">Desbloquea paquetes de memes para usarlos en el juego y WhatsApp.</p>
+  <div id="stickerStoreList" class="sticker-grid"></div>
+</div>
+
 <div id="homeMsg" class="status hidden"></div>
 </div>
 
@@ -126,8 +145,15 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 <label>Tu texto personalizado</label>
 <textarea id="qText" maxlength="240" rows="2" placeholder="Escribe aquí tu reto o pregunta..."></textarea>
 
-<label>Foto (opcional)</label>
-<input type="file" id="qImageFile" accept="image/*" style="padding:6px;font-size:0.85rem">
+<label>Foto o Sticker</label>
+<div class="row">
+  <input type="file" id="qImageFile" accept="image/*" style="padding:6px;font-size:0.85rem;flex:1">
+</div>
+<div id="stickerPickerBox" style="margin-top:8px">
+  <span class="tiny" style="color:var(--gold)">O envía un sticker de tu colección:</span>
+  <div id="activeStickerSelector" class="sticker-grid" style="max-height:100px;overflow-y:auto"></div>
+</div>
+
 <div class="row" style="margin-top:10px"><button id="postQuestion" style="width:100%">Publicar en el muro</button></div>
 <div id="roomMsg" class="status hidden"></div>
 
@@ -147,9 +173,21 @@ const SUPABASE_URL = "https://qsjmwuwyqcwmukepekeu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzam13dXd5cWN3bXVrZXBla2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0ODg0NjksImV4cCI6MjEwNzA2NDQ2OX0.43E5uibPN1eUu2Rf3lIiLIK_6we_MZVzFs_EXDurg8c".trim();
 
 const avatarList = ["Cali", "Buster", "Zoe", "Milo", "Gizmo", "Kiki", "Socks", "Coco", "Nala", "Simba", "Rex", "Luna", "Oscar", "Bella", "Zeus"];
+
+// CATÁLOGO DE STICKERS DISPONIBLES EN LA TIENDA
+const catalogStickers = [
+  {id: 'stk_1', name: 'Gato Pro', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerCat'},
+  {id: 'stk_2', name: 'Fuego Puro', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerFire'},
+  {id: 'stk_3', name: 'Robloxian', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerRoblox'},
+  {id: 'stk_4', name: 'Calavera Risk', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerSkull'},
+  {id: 'stk_5', name: 'Alien Chill', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerAlien'},
+  {id: 'stk_6', name: 'Risa Épica', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerLaugh'}
+];
+
 let supabase = null, user = null, profile = {name:"",avatar:"",coins:150}, selectedAvatar = "", currentRoom = null, roomChannel = null, refreshTimer = null;
 let targetUser = null;
 let lastQuestionCount = 0;
+let selectedStickerUrl = null;
 const processedLocally = new Set(); 
 
 try {
@@ -176,19 +214,27 @@ function saveLocalCards(cards) {
   } catch(e) {}
 }
 
-function getVipStatus() {
+function getUnlockedStickers() {
   try {
-    return localStorage.getItem("ta_vip_active") === "true";
-  } catch(e) { return false; }
+    const saved = localStorage.getItem("ta_unlocked_stickers");
+    return saved ? JSON.parse(saved) : ['stk_1']; // Empiezan con uno gratis
+  } catch(e) { return ['stk_1']; }
+}
+
+function saveUnlockedStickers(stks) {
+  try {
+    localStorage.setItem("ta_unlocked_stickers", JSON.stringify(stks));
+  } catch(e) {}
+}
+
+function getVipStatus() {
+  try { return localStorage.getItem("ta_vip_active") === "true"; } catch(e) { return false; }
 }
 
 function getVipTitle() {
-  try {
-    return localStorage.getItem("ta_vip_title") || "👑 VIP ⚡";
-  } catch(e) { return "👑 VIP ⚡"; }
+  try { return localStorage.getItem("ta_vip_title") || "👑 VIP ⚡"; } catch(e) { return "👑 VIP ⚡"; }
 }
 
-// SINTETIZADORES DE SONIDO INTEGRADOS
 function playVipSound() {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -241,23 +287,6 @@ function playFailSound() {
   } catch(e) {}
 }
 
-function playCardSound() {
-  try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.2);
-    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.3);
-  } catch(e) {}
-}
-
 window.switchTab = function(tabId, btnElement) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -307,7 +336,114 @@ function loadProfile(){
   profile.avatar = getAvatarUrl(selectedAvatar);
   $("nickname").value = profile.name;
   makeAvatars();
+  renderStickersUI();
 }
+
+// RENDERIZAR LA TIENDA Y COLECCIÓN DE STICKERS
+function renderStickersUI() {
+  const unlocked = getUnlockedStickers();
+  
+  // 1. Mis stickers en perfil (para descargar a WhatsApp)
+  const collContainer = $("myStickersCollection");
+  if(collContainer) {
+    collContainer.innerHTML = unlocked.map(id => {
+      const st = catalogStickers.find(s => s.id === id);
+      if(!st) return '';
+      return `
+        <div class="sticker-item" onclick="window.downloadSticker('${st.url}', '${st.name}')" title="Toca para descargar a WhatsApp">
+          <img src="${st.url}" alt="${st.name}">
+          <div class="tiny" style="color:var(--cyan);margin-top:4px">📥 Descargar</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 2. Tienda de stickers
+  const storeContainer = $("stickerStoreList");
+  if(storeContainer) {
+    storeContainer.innerHTML = catalogStickers.map(st => {
+      const isOwned = unlocked.includes(st.id);
+      return `
+        <div class="sticker-item">
+          <img src="${st.url}" alt="${st.name}">
+          <div class="tiny" style="font-weight:bold">${st.name}</div>
+          ${isOwned ? '<span class="tiny" style="color:var(--good)">✔️ Adquirido</span>' : `<button class="secondary" style="padding:4px;font-size:0.7rem;margin-top:4px;width:100%" onclick="window.buySticker('${st.id}')">🪙 30</button>`}
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 3. Selector rápido de stickers en el juego activo
+  const activeSelector = $("activeStickerSelector");
+  if(activeSelector) {
+    activeSelector.innerHTML = `<div class="sticker-item ${selectedStickerUrl===null?'selected':''}" onclick="window.selectStickerForPost(null)" style="padding:4px"><span class="tiny">Ninguno</span></div>` + 
+      unlocked.map(id => {
+        const st = catalogStickers.find(s => s.id === id);
+        if(!st) return '';
+        const isSel = selectedStickerUrl === st.url;
+        return `
+          <div class="sticker-item ${isSel?'selected':''}" onclick="window.selectStickerForPost('${st.url}')" style="padding:4px">
+            <img src="${st.url}" style="width:36px;height:36px" alt="${st.name}">
+          </div>
+        `;
+      }).join('');
+  }
+}
+
+window.buySticker = async function(stickerId) {
+  if(profile.coins < 30) { alert("No tienes suficientes monedas (necesitas 🪙 30)."); return; }
+  const unlocked = getUnlockedStickers();
+  if(unlocked.includes(stickerId)) return;
+
+  try {
+    if(currentRoom && user) {
+      const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", user.id).single();
+      if(!errGet && curMem) {
+        const realCoins = curMem.coins !== undefined ? curMem.coins : profile.coins;
+        if(realCoins < 30) { alert("No tienes suficientes monedas."); return; }
+        await supabase.from("game_members").update({coins: realCoins - 30}).eq("room_id", currentRoom.id).eq("user_id", user.id);
+        profile.coins = realCoins - 30;
+        $("userCoins").textContent = "🪙 " + profile.coins;
+      }
+    } else {
+      profile.coins -= 30;
+      $("userCoins").textContent = "🪙 " + profile.coins;
+    }
+
+    unlocked.push(stickerId);
+    saveUnlockedStickers(unlocked);
+    playSuccessSound();
+    showToast("¡Sticker desbloqueado con éxito!");
+    renderStickersUI();
+  } catch(e) {
+    alert("Error al comprar sticker: " + e.message);
+  }
+};
+
+window.downloadSticker = async function(url, name) {
+  try {
+    showToast("Preparando sticker para WhatsApp...");
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `${name.replace(/\s+/g, '_')}_sticker.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+    showToast("¡Sticker descargado! Agrégalo a WhatsApp con Sticker Maker.");
+  } catch(e) {
+    window.open(url, '_blank');
+  }
+};
+
+window.selectStickerForPost = function(url) {
+  selectedStickerUrl = url;
+  renderStickersUI();
+  if(url) showToast("Sticker seleccionado para tu publicación.");
+};
 
 async function initAutoConnect(){
  try{
@@ -456,7 +592,7 @@ async function refreshRoom(isFirstLoad = false){
        ${cardUsedTag}
        <p style="margin:4px 0">${safe(q.body)}</p>
       </div>
-      ${q.image_url ? `<img src="${q.image_url}" class="post-img" alt="Foto">` : ''}
+      ${q.image_url ? `<img src="${q.image_url}" class="${q.image_url.includes('dicebear')?'chat-sticker':'post-img'}" alt="Media">` : ''}
       
       <div class="row" style="margin-top:6px;gap:6px;align-items:center;justify-content:space-between">
         <div style="display:flex;align-items:center;gap:6px">
@@ -535,9 +671,6 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
   if(!currentRoom || !user) { alert("Entra primero a una sala."); return; }
   if(!confirm(`¿Usar la carta "${cardName}" en esta publicación?`)) return;
 
-  // SONIDO DE CARTA DE SALVACIÓN
-  playCardSound();
-
   try {
     const {data: qData} = await supabase.from("game_questions").select("*").eq("id", questionId).single();
     if(!qData) throw new Error("Publicación no encontrada");
@@ -574,9 +707,7 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
 };
 
 window.confirmReward = async function(questionId){
-  // SONIDO DE CUMPLIDO
   playSuccessSound();
-
   processedLocally.add(questionId);
   saveProcessedLocal();
 
@@ -619,9 +750,7 @@ window.confirmReward = async function(questionId){
 window.confirmFail = async function(questionId){
   if(!confirm("¿Confirmas que NO cumplió? Se le restarán 10 monedas (permite saldo negativo).")) return;
   
-  // SONIDO DE FALLO
   playFailSound();
-
   processedLocally.add(questionId);
   saveProcessedLocal();
 
@@ -640,15 +769,6 @@ window.confirmFail = async function(questionId){
 
     const currentCoins = targetMember ? (targetMember.coins !== undefined ? targetMember.coins : 150) : 150;
     const newCoins = currentCoins - 10;
-
-    if(qData.applied_card && qData.applied_card.includes("Comodín")) {
-      const authorId = qData.author_id;
-      const {data: authorMem} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", authorId).single();
-      const authorCoins = authorMem ? (authorMem.coins || 150) : 150;
-      
-      await supabase.from("game_members").update({coins: authorCoins - 5}).eq("room_id", currentRoom.id).eq("user_id", authorId);
-      showToast("Comodín fallido: -5 monedas a ambos.");
-    }
 
     await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", targetId);
     await supabase.from("game_questions").update({reward_claimed: true, applied_card: "❌ No cumplió (-10🪙)"}).eq("id", questionId);
@@ -772,12 +892,13 @@ async function postQuestion(){
  if(targetUser && !isUuid(targetUser.id)){ targetUser = null; $("targetIndicator").classList.add("hidden"); }
  const body=$("qText").value.trim();
  const fileInput=$("qImageFile");
- if(body.length<2 && (!fileInput.files || fileInput.files.length === 0)){
-   status("roomMsg","Escribe un texto o sube una foto.","error");
+ 
+ if(body.length<2 && (!fileInput.files || fileInput.files.length === 0) && !selectedStickerUrl){
+   status("roomMsg","Escribe un texto, sube una foto o selecciona un sticker.","error");
    return;
  }
  try{
-  let imageUrl = null;
+  let imageUrl = selectedStickerUrl;
   if(fileInput.files && fileInput.files[0]){
     const file = fileInput.files[0];
     imageUrl = await new Promise((resolve) => {
@@ -796,7 +917,7 @@ async function postQuestion(){
     nickname: authorName, 
     avatar: profile.avatar, 
     kind: $("qType").value, 
-    body: body || "📸 Foto del reto:", 
+    body: body || (selectedStickerUrl ? "✨ Sticker compartido:" : "📸 Foto del reto:"), 
     image_url: imageUrl,
     target_user_id: targetUser ? targetUser.id : null,
     target_nickname: targetUser ? targetUser.name : null,
@@ -805,6 +926,8 @@ async function postQuestion(){
   if(error)throw error;
 
   $("qText").value=""; $("presetSelector").value=""; fileInput.value="";
+  selectedStickerUrl = null;
+  renderStickersUI();
   window.cancelTarget();
   status("roomMsg","¡Publicado con éxito!","ok");
   playVipSound();
