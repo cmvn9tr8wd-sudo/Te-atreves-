@@ -420,10 +420,9 @@ async function openRoom(id,code,name){
    return;
  }
 
-  const tabId = 'tab-room-' + id;
+ const tabId = 'tab-room-' + id;
  const btnId = 'btn-tab-room-' + id;
  const navContainer = $("navTabsContainer");
-
  const newBtn = document.createElement("button");
  newBtn.id = btnId;
  newBtn.className = "tab-btn";
@@ -477,7 +476,6 @@ async function openRoom(id,code,name){
    })
    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"game_challenges",filter:"room_id=eq."+id}, payload => {
       const challenge = payload.new;
-      // Si el retador detecta que fue aceptado, arranca el juego para él también
       if(challenge.sender_id === user.id && challenge.status === 'accepted') {
         startInteractiveMinigame(id, challenge.game_type, challenge.id, challenge.sender_name, challenge.target_name);
       }
@@ -612,7 +610,6 @@ function startInteractiveMinigame(roomId, gameType, challengeId, senderName, tar
       if($("gameTimer")) $("gameTimer").textContent = `Tiempo restante: ${timeLeft}s`;
       if(timeLeft <= 0) {
         clearInterval(timerInterval);
-        // Guardar resultado del clicker en el reto
         const winnerText = `🏆 ¡Duelo de Velocidad ganado por ${profile.name} con ${clicks} clics! (+🪙20 Pozo)`;
         await supabase.from("game_challenges").update({status: 'finished', result_text: winnerText}).eq("id", challengeId);
         finishGameAndReward(roomId, winnerText);
