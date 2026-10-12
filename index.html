@@ -116,7 +116,18 @@ const avatarList = ["Cali", "Buster", "Zoe", "Milo", "Gizmo", "Kiki", "Socks", "
 let supabase = null, user = null, profile = {name:"",avatar:"",coins:150}, selectedAvatar = "", currentRoom = null, roomChannel = null, refreshTimer = null;
 let targetUser = null;
 let lastQuestionCount = 0;
-const processedLocally = new Set(); // Control en memoria para bloquear permanentemente los botones
+const processedLocally = new Set(); 
+
+try {
+  const saved = localStorage.getItem("ta_processed_questions");
+  if(saved) { parsed = JSON.parse(saved); parsed.forEach(id => processedLocally.add(id)); }
+} catch(e) {}
+
+function saveProcessedLocal() {
+  try {
+    localStorage.setItem("ta_processed_questions", JSON.stringify(Array.from(processedLocally)));
+  } catch(e) {}
+}
 
 window.switchTab = function(tabId, btnElement) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -247,7 +258,9 @@ async function refreshRoom(isFirstLoad = false){
   const members = membersRes.data || [];
   const questions = questionsRes.data || [];
   const comments = commentsRes.data || [];
-  const myCards = (cardsRes.data || []).filter(c => c.is_used !== true);
+  
+  // Filtro flexible para asegurar que las cartas aparezcan correctamente sin importar cómo se guardó el booleano
+  const myCards = (cardsRes.data || []).filter(c => c.is_used === false || c.is_used === null || c.is_used === "false" || c.is_used === 0 || c.is_used === undefined);
   
   if(!isFirstLoad) {
     if(questions.length > lastQuestionCount) {
@@ -272,7 +285,6 @@ async function refreshRoom(isFirstLoad = false){
     const targetTag = q.target_nickname ? `<span class="pill" style="background:#4a1e4a;margin-bottom:6px">🎯 Dirigido a: ${safe(q.target_nickname)}</span><br>` : '';
     const cardUsedTag = q.applied_card ? `<span class="pill" style="background:#1e3a4a;color:var(--cyan);margin-bottom:6px">🛡️ Carta aplicada: ${safe(q.applied_card)}</span><br>` : '';
     
-    // Verificación estricta utilizando la base de datos o el bloqueo local inmediato
     const isClaimed = q.reward_claimed === true || q.reward_claimed === "true" || processedLocally.has(q.id);
 
     let cardButtonsHtml = '';
@@ -405,8 +417,9 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
 };
 
 window.confirmReward = async function(questionId){
-  // Bloqueo visual inmediato en la interfaz para que el botón desaparezca al primer clic
   processedLocally.add(questionId);
+  saveProcessedLocal();
+
   const actionArea = $(`action-area-${questionId}`);
   if(actionArea) actionArea.innerHTML = `<span class="tiny" style="color:var(--good);font-weight:bold">✔️ Procesado</span>`;
   const cardWrap = $(`card-wrap-${questionId}`);
@@ -446,8 +459,9 @@ window.confirmReward = async function(questionId){
 window.confirmFail = async function(questionId){
   if(!confirm("¿Confirmas que NO cumplió? Se le restarán 10 monedas (permite saldo negativo).")) return;
   
-  // Bloqueo visual inmediato en la interfaz para que el botón desaparezca al primer clic
   processedLocally.add(questionId);
+  saveProcessedLocal();
+
   const actionArea = $(`action-area-${questionId}`);
   if(actionArea) actionArea.innerHTML = `<span class="tiny" style="color:var(--bad);font-weight:bold">❌ No cumplió (-10🪙)</span>`;
   const cardWrap = $(`card-wrap-${questionId}`);
