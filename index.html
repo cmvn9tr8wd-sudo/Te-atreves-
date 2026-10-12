@@ -15,6 +15,13 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 .tab-content{display:none}
 .tab-content.active{display:block}
 
+/* Subpestañas internas para las salas */
+.sub-tabs{display:flex;gap:4px;background:#15102d;padding:4px;border-radius:12px;border:1px solid var(--line);margin:12px 0}
+.sub-tab-btn{flex:1;background:transparent;border:0;border-radius:8px;padding:8px;font:inherit;font-weight:700;font-size:0.8rem;color:var(--muted);cursor:pointer;text-align:center;transition:all .2s}
+.sub-tab-btn.active{background:var(--purple);color:#180d2a}
+.sub-tab-content{display:none}
+.sub-tab-content.active{display:block}
+
 .card{background:rgba(27,21,53,.96);border:1px solid var(--line);border-radius:20px;padding:18px;margin:12px 0;box-shadow:0 8px 30px #0003}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}h2{font-size:1.15rem;margin:0 0 12px}h3{font-size:1.05rem;margin:0 0 8px}.muted{color:var(--muted);font-size:.9rem}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}input,select,textarea{width:100%;background:#100c24;color:var(--text);border:1px solid #594779;border-radius:12px;padding:12px;font:inherit;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--pink)}label{display:block;color:var(--muted);font-size:0.85rem;margin:10px 0 4px}button{border:0;border-radius:12px;padding:12px 16px;font:inherit;font-weight:800;cursor:pointer;background:linear-gradient(100deg,var(--purple),var(--pink));color:#180d2a}button.secondary{background:#332653;color:var(--text);border:1px solid #594779}button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}.hidden{display:none!important}.status{padding:10px 12px;border-radius:12px;background:#221b3e;color:var(--muted);margin:10px 0;white-space:pre-wrap;font-size:0.9rem}.status.error{color:#fecaca;border:1px solid #7f1d1d}.status.ok{color:var(--good)}.avatars{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px}.avatar{padding:6px;border:2px solid var(--line);border-radius:14px;background:#100c24;cursor:pointer;display:flex;align-items:center;justify-content:center}.avatar.selected{border-color:var(--pink);background:#40204e;transform:scale(1.05)}.avatar img{width:45px;height:45px;border-radius:50%}.roomcode{font-size:1.8rem;letter-spacing:.15em;font-weight:900;color:var(--cyan)}.pill{display:inline-block;background:#372754;border:1px solid var(--line);padding:4px 8px;border-radius:99px;font-size:0.78rem;color:var(--muted)}.player{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;margin:3px;background:#241b40;border-radius:10px;font-size:0.9rem;cursor:pointer;border:1px solid var(--line)}.player:hover{border-color:var(--cyan)}.player img{width:24px;height:24px;border-radius:50%}.question{border:1px solid #564174;background:linear-gradient(135deg,#2a1b4b,#20152f);padding:14px;border-radius:14px;margin:10px 0}.question p{font-size:1rem;margin:0 0 8px}.tiny{font-size:0.78rem;color:var(--muted)}.foot{font-size:0.8rem;color:var(--muted);text-align:center;margin-top:20px}
 .coins-badge{background:#2e234c;border:1px solid var(--gold);color:var(--gold);padding:4px 10px;border-radius:99px;font-weight:700;font-size:0.85rem}
 .card-item{background:linear-gradient(135deg,#322055,#1d1338);border:1px solid var(--purple);border-radius:12px;padding:12px;margin:8px 0}
@@ -184,7 +191,7 @@ const catalogStickers = [
 ];
 
 let supabase = null, user = null, profile = {name:"",avatar:"",coins:50}, selectedAvatar = "";
-let activeRooms = {}; // { roomId: { id, code, name, channel, timer, lastCount, targetUser, selectedStickerUrl } }
+let activeRooms = {}; 
 
 const processedLocally = new Set(); 
 try {
@@ -304,9 +311,18 @@ window.switchTab = function(tabId, btnElement) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
+// Función para alternar subpestañas dentro de las salas activas
+window.switchSubTab = function(roomId, subTabName, btnElement) {
+  const container = $(`room-content-${roomId}`);
+  if(!container) return;
+  container.querySelectorAll('.sub-tab-content').forEach(el => el.classList.remove('active'));
+  container.querySelectorAll('.sub-tab-btn').forEach(el => el.classList.remove('active'));
+  $(`${subTabName}-${roomId}`).classList.add('active');
+  btnElement.classList.add('active');
+};
+
 function status(id, msg, kind="") { const el=$(id); el.textContent=msg; el.className="status"+(kind?" "+kind:""); el.classList.remove("hidden"); }
 function cleanCode(s){return (s||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8)}
-function isUuid(value){return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)}
 
 function getAvatarUrl(seed) { 
   if (seed && seed.startsWith("http")) return seed;
@@ -434,7 +450,6 @@ function renderStickersUI() {
     }).join('');
   }
 
-  // Actualizar selectores de stickers en salas abiertas
   Object.keys(activeRooms).forEach(roomId => {
     const activeSelector = $(`activeStickerSelector-${roomId}`);
     if(activeSelector) {
@@ -577,64 +592,86 @@ async function openRoom(id,code,name){
      </div>
      <div class="status" style="font-size:0.8rem;word-break:break-all">Invitación: ${location.origin}${location.pathname}?sala=${safe(code)}</div>
 
-     <div class="grid" style="margin-top:14px">
-       <div class="card" style="background:#15102d;margin:0">
-         <h3>🛡️ Tus Cartas de Salvación</h3>
-         <p class="muted" style="font-size:0.85rem">Compra cartas (🪙 40): Comodín, Bloqueo o Recompensa Doble.</p>
-         <div id="myCardsList-${id}"><p class="muted">No tienes cartas activas.</p></div>
-         <button class="secondary" style="margin-top:8px;width:100%" onclick="window.buyCard()">Comprar Carta (🪙 40)</button>
+     <!-- SUBPESTAÑAS DE LA SALA -->
+     <div class="sub-tabs">
+       <button class="sub-tab-btn active" onclick="window.switchSubTab('${id}', 'subtab-muro', this)">💥 Muro de Retos</button>
+       <button class="sub-tab-btn" onclick="window.switchSubTab('${id}', 'subtab-minigames', this)">🎮 Mini Juegos</button>
+     </div>
+
+     <div id="room-content-${id}">
+       <!-- SUBPESTAÑA 1: MURO DE RETOS -->
+       <div id="subtab-muro-${id}" class="sub-tab-content active">
+         <div class="grid" style="margin-top:14px">
+           <div class="card" style="background:#15102d;margin:0">
+             <h3>🛡️ Tus Cartas de Salvación</h3>
+             <p class="muted" style="font-size:0.85rem">Compra cartas (🪙 40): Comodín, Bloqueo o Recompensa Doble.</p>
+             <div id="myCardsList-${id}"><p class="muted">No tienes cartas activas.</p></div>
+             <button class="secondary" style="margin-top:8px;width:100%" onclick="window.buyCard()">Comprar Carta (🪙 40)</button>
+           </div>
+         </div>
+
+         <h3 style="margin-top:20px">👥 Jugadores conectados (Toca uno para retarlo directamente)</h3>
+         <div id="players-${id}"></div>
+         <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+
+         <h3>🎲 Publicar reto o pregunta</h3>
+         <div id="targetIndicator-${id}" class="status hidden" style="border-left:3px solid var(--pink);background:#251638">Reto dirigido a: <strong id="targetNameDisp-${id}"></strong> <button class="ghost" style="padding:2px 6px;font-size:0.75rem;float:right" onclick="window.cancelTarget('${id}')">Cancelar</button></div>
+
+         <label>Tipo</label>
+         <select id="qType-${id}">
+           <option value="pregunta">❓ Pregunta</option>
+           <option value="reto">🔥 Reto</option>
+         </select>
+
+         <label>Opción rápida o libre</label>
+         <select id="presetSelector-${id}" onchange="window.selectPreset('${id}')">
+           <option value="">✨ Escribir mi propio texto (Libre)...</option>
+           <option value="¿Cuál ha sido el momento más vergonzoso de tu vida?">❓ ¿Cuál ha sido el momento más vergonzoso de tu vida?</option>
+           <option value="Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?">❓ Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?</option>
+           <option value="¿Cuál es el secreto más grande que le has ocultado a tus padres?">❓ ¿Cuál es el secreto más grande que le has ocultado a tus padres?</option>
+           <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">❓ Si tuvieras que casarte con alguien de este grupo, ¿quién sería?</option>
+           <option value="¿Cuál ha sido tu peor cita en la vida real?">❓ ¿Cuál ha sido tu peor cita en la vida real?</option>
+           <option value="¿Qué es lo más extraño que has comprado en internet a las 3 AM?">❓ ¿Qué es lo más extraño que has comprado en internet a las 3 AM?</option>
+           <option value="Muestra la última foto guardada en tu galería sin vergüenza">🔥 Muestra la última foto guardada en tu galería sin vergüenza</option>
+           <option value="Llama al contacto número 5 de tu teléfono y cántale los primeros 10 segundos de una canción">🔥 Llama al contacto número 5 de tu teléfono y cántale una canción</option>
+           <option value="Imita el comportamiento de un animal durante 30 segundos en medio de la sala">🔥 Imita el comportamiento de un animal durante 30 segundos</option>
+           <option value="Deja que el grupo revise tus últimas 5 búsquedas en Google">🔥 Deja que el grupo revise tus últimas 5 búsquedas en Google</option>
+           <option value="Envía un audio diciendo tu más grande ridículo al chat de tu ex o de un grupo familiar">🔥 Envía un audio diciendo tu más grande ridículo a un chat familiar</option>
+           <option value="Haz tu mejor pasarela de modelos por toda la habitación">🔥 Haz tu mejor pasarela de modelos por toda la habitación</option>
+           <option value="Deja que la persona a tu derecha te dibuje un bigote con pluma en la cara">🔥 Deja que te dibujen un bigote con pluma en la cara</option>
+           <option value="Habla con acento extraño (español de España o argentino muy exagerado) durante las próximas 3 rondas">🔥 Habla con acento exagerado durante las próximas 3 rondas</option>
+         </select>
+
+         <label>Tu texto personalizado</label>
+         <textarea id="qText-${id}" maxlength="240" rows="2" placeholder="Escribe aquí tu reto o pregunta..."></textarea>
+
+         <label>Foto, Video o Sticker</label>
+         <div class="row">
+           <input type="file" id="qImageFile-${id}" accept="image/*,video/*" style="padding:6px;font-size:0.85rem;flex:1">
+         </div>
+         <div style="margin-top:8px">
+           <span class="tiny" style="color:var(--gold)">O envía un sticker de tu colección:</span>
+           <div id="activeStickerSelector-${id}" class="sticker-grid" style="max-height:100px;overflow-y:auto"></div>
+         </div>
+
+         <div class="row" style="margin-top:10px"><button style="width:100%" onclick="window.postQuestion('${id}')">Publicar en el muro</button></div>
+         <div id="roomMsg-${id}" class="status hidden"></div>
+
+         <h3 style="margin-top:22px">💥 Muro de actividad</h3>
+         <div id="questions-${id}"><p class="muted">Sin publicaciones aún.</p></div>
+       </div>
+
+       <!-- SUBPESTAÑA 2: MINI JUEGOS -->
+       <div id="subtab-minigames-${id}" class="sub-tab-content">
+         <div class="card" style="background:#15102d;margin-top:10px;text-align:center">
+           <h3>🎰 Ruleta de la Suerte</h3>
+           <p class="muted" style="font-size:0.85rem">Gira la ruleta y prueba tu suerte para ganar monedas o llevarte una penitencia.</p>
+           <div id="wheelResult-${id}" class="roomcode" style="font-size:1.4rem;margin:15px 0;color:var(--gold)">¡Listo para girar!</div>
+           <button style="width:100%;max-width:280px" onclick="window.spinWheel('${id}')">🎲 ¡Girar Ruleta!</button>
+         </div>
        </div>
      </div>
 
-     <h3 style="margin-top:20px">👥 Jugadores conectados (Toca uno para retarlo directamente)</h3>
-     <div id="players-${id}"></div>
-     <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
-
-     <h3>🎲 Publicar reto o pregunta</h3>
-     <div id="targetIndicator-${id}" class="status hidden" style="border-left:3px solid var(--pink);background:#251638">Reto dirigido a: <strong id="targetNameDisp-${id}"></strong> <button class="ghost" style="padding:2px 6px;font-size:0.75rem;float:right" onclick="window.cancelTarget('${id}')">Cancelar</button></div>
-
-     <label>Tipo</label>
-     <select id="qType-${id}">
-       <option value="pregunta">❓ Pregunta</option>
-       <option value="reto">🔥 Reto</option>
-     </select>
-
-     <label>Opción rápida o libre</label>
-     <select id="presetSelector-${id}" onchange="window.selectPreset('${id}')">
-       <option value="">✨ Escribir mi propio texto (Libre)...</option>
-       <option value="¿Cuál ha sido el momento más vergonzoso de tu vida?">❓ ¿Cuál ha sido el momento más vergonzoso de tu vida?</option>
-       <option value="Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?">❓ Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?</option>
-       <option value="¿Cuál es el secreto más grande que le has ocultado a tus padres?">❓ ¿Cuál es el secreto más grande que le has ocultado a tus padres?</option>
-       <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">❓ Si tuvieras que casarte con alguien de este grupo, ¿quién sería?</option>
-       <option value="¿Cuál ha sido tu peor cita en la vida real?">❓ ¿Cuál ha sido tu peor cita en la vida real?</option>
-       <option value="¿Qué es lo más extraño que has comprado en internet a las 3 AM?">❓ ¿Qué es lo más extraño que has comprado en internet a las 3 AM?</option>
-       <option value="Muestra la última foto guardada en tu galería sin vergüenza">🔥 Muestra la última foto guardada en tu galería sin vergüenza</option>
-       <option value="Llama al contacto número 5 de tu teléfono y cántale los primeros 10 segundos de una canción">🔥 Llama al contacto número 5 de tu teléfono y cántale una canción</option>
-       <option value="Imita el comportamiento de un animal durante 30 segundos en medio de la sala">🔥 Imita el comportamiento de un animal durante 30 segundos</option>
-       <option value="Deja que el grupo revise tus últimas 5 búsquedas en Google">🔥 Deja que el grupo revise tus últimas 5 búsquedas en Google</option>
-       <option value="Envía un audio diciendo tu más grande ridículo al chat de tu ex o de un grupo familiar">🔥 Envía un audio diciendo tu más grande ridículo a un chat familiar</option>
-       <option value="Haz tu mejor pasarela de modelos por toda la habitación">🔥 Haz tu mejor pasarela de modelos por toda la habitación</option>
-       <option value="Deja que la persona a tu derecha te dibuje un bigote con pluma en la cara">🔥 Deja que te dibujen un bigote con pluma en la cara</option>
-       <option value="Habla con acento extraño (español de España o argentino muy exagerado) durante las próximas 3 rondas">🔥 Habla con acento exagerado durante las próximas 3 rondas</option>
-     </select>
-
-     <label>Tu texto personalizado</label>
-     <textarea id="qText-${id}" maxlength="240" rows="2" placeholder="Escribe aquí tu reto o pregunta..."></textarea>
-
-     <label>Foto, Video o Sticker</label>
-     <div class="row">
-       <input type="file" id="qImageFile-${id}" accept="image/*,video/*" style="padding:6px;font-size:0.85rem;flex:1">
-     </div>
-     <div style="margin-top:8px">
-       <span class="tiny" style="color:var(--gold)">O envía un sticker de tu colección:</span>
-       <div id="activeStickerSelector-${id}" class="sticker-grid" style="max-height:100px;overflow-y:auto"></div>
-     </div>
-
-     <div class="row" style="margin-top:10px"><button style="width:100%" onclick="window.postQuestion('${id}')">Publicar en el muro</button></div>
-     <div id="roomMsg-${id}" class="status hidden"></div>
-
-     <h3 style="margin-top:22px">💥 Muro de actividad</h3>
-     <div id="questions-${id}"><p class="muted">Sin publicaciones aún.</p></div>
    </div>
  `;
  dynamicContainer.appendChild(newDiv);
@@ -658,6 +695,36 @@ async function openRoom(id,code,name){
  renderStickersUI();
  await refreshRoom(id, true);
 }
+
+// Ejemplo de función para el mini juego de la ruleta
+window.spinWheel = async function(roomId){
+  playSuccessSound();
+  const outcomes = [
+    {text: "🎉 ¡Ganaste 🪙 20 monedas!", coins: 20},
+    {text: "🔥 ¡Penitencia! Haz 10 lagartijas", coins: 0},
+    {text: "🪙 ¡Ganaste 🪙 50 monedas!", coins: 50},
+    {text: "😢 ¡Pierdes 🪙 10 monedas!", coins: -10},
+    {text: "✨ ¡Te salvaste! Nada pasa", coins: 0}
+  ];
+  const res = outcomes[Math.floor(Math.random() * outcomes.length)];
+  const wheelDisp = $(`wheelResult-${roomId}`);
+  if(wheelDisp) wheelDisp.textContent = res.text;
+
+  if(res.coins !== 0) {
+    try {
+      const {data: curMem} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
+      const currentCoins = curMem ? (curMem.coins || 50) : profile.coins;
+      const newCoins = currentCoins + res.coins;
+      await supabase.from("game_members").update({coins: newCoins}).eq("room_id", roomId).eq("user_id", user.id);
+      showToast(res.text);
+      refreshRoom(roomId, false);
+    } catch(e) {
+      showToast(res.text);
+    }
+  } else {
+    showToast(res.text);
+  }
+};
 
 window.closeRoomTab = async function(id) {
   if(!activeRooms[id]) return;
