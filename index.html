@@ -107,6 +107,18 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 </div>
 </div>
 
+<div class="card" style="background:#15102d;margin:12px 0">
+  <h3>👑 Tienda de Estatus VIP & Neón</h3>
+  <p class="muted" style="font-size:0.85rem">Desbloquea neón, emojis animados y sonido especial (🪙 100).</p>
+  <div id="myVipStatus-profile"><p class="muted">Sin rango VIP activo.</p></div>
+  <button class="secondary" style="margin-top:8px;width:100%;background:linear-gradient(100deg,#f59e0b,#ef4444);color:#fff" onclick="window.buyVip()">Desbloquear Rango VIP (🪙 100)</button>
+  <div id="vipCustomBox-profile" class="hidden" style="margin-top:10px">
+    <label>Personalizar título VIP con emojis (<span style="color:var(--gold)">🪙 50</span>)</label>
+    <input id="vipCustomText-profile" maxlength="15" placeholder="Ej. ⚡ Rey 🔥">
+    <button class="secondary" style="margin-top:6px;width:100%;font-size:0.8rem" onclick="window.saveVipCustom('profile')">Actualizar Título (🪙 50)</button>
+  </div>
+</div>
+
 <div class="card">
   <h3>🖼️ Mis Stickers Desbloqueados (Listos para WhatsApp)</h3>
   <p class="muted" style="font-size:0.85rem">Toca cualquier sticker de tu colección para descargarlo directamente a tu celular.</p>
@@ -345,6 +357,7 @@ function loadProfile(){
   makeAvatars();
   update3dPreview();
   renderStickersUI();
+  renderProfileVipUI();
 }
 
 $("applyCustomAvatar").onclick = () => {
@@ -370,6 +383,26 @@ $("customAvatarFile").onchange = (e) => {
   };
   reader.readAsDataURL(file);
 };
+
+function renderProfileVipUI() {
+  const isVip = getVipStatus();
+  const vipStatus = $("myVipStatus-profile");
+  const vipBox = $("vipCustomBox-profile");
+  if(vipStatus) {
+    if (isVip) {
+      vipStatus.innerHTML = `
+       <div class="card-item" style="border-color:var(--gold);background:linear-gradient(135deg,#3b2712,#1a1309)">
+        <strong class="vip-animated-name">${safe(getVipTitle())} <span class="vip-emoji">✨</span></strong><br>
+        <span class="muted" style="font-size:0.8rem">Efecto neón, emojis animados y sonido VIP activos.</span>
+       </div>
+      `;
+      if(vipBox) vipBox.classList.remove("hidden");
+    } else {
+      vipStatus.innerHTML = '<span class="muted" style="font-size:0.85rem">No has adquirido el rango VIP.</span>';
+      if(vipBox) vipBox.classList.add("hidden");
+    }
+  }
+}
 
 function renderStickersUI() {
   const unlocked = getUnlockedStickers();
@@ -517,7 +550,6 @@ async function joinRoom(){
 
 async function openRoom(id,code,name){
  if(activeRooms[id]) {
-   // Si ya está abierta, solo cambiamos a su pestaña
    window.switchTab('tab-room-' + id, $(`btn-tab-room-${id}`));
    return;
  }
@@ -525,7 +557,6 @@ async function openRoom(id,code,name){
  const tabId = 'tab-room-' + id;
  const btnId = 'btn-tab-room-' + id;
 
- // Crear botón en la barra de navegación superior
  const navContainer = $("navTabsContainer");
  const newBtn = document.createElement("button");
  newBtn.id = btnId;
@@ -534,7 +565,6 @@ async function openRoom(id,code,name){
  newBtn.onclick = () => window.switchTab(tabId, newBtn);
  navContainer.appendChild(newBtn);
 
- // Crear contenido de la pestaña de la sala
  const dynamicContainer = $("dynamicRoomsContainer");
  const newDiv = document.createElement("div");
  newDiv.id = tabId;
@@ -553,18 +583,6 @@ async function openRoom(id,code,name){
          <p class="muted" style="font-size:0.85rem">Compra cartas (🪙 40): Comodín, Bloqueo o Recompensa Doble.</p>
          <div id="myCardsList-${id}"><p class="muted">No tienes cartas activas.</p></div>
          <button class="secondary" style="margin-top:8px;width:100%" onclick="window.buyCard()">Comprar Carta (🪙 40)</button>
-       </div>
-
-       <div class="card" style="background:#15102d;margin:0">
-         <h3>👑 Tienda de Estatus VIP & Neón</h3>
-         <p class="muted" style="font-size:0.85rem">Desbloquea neón, emojis animados y sonido especial (🪙 100).</p>
-         <div id="myVipStatus-${id}"><p class="muted">Sin rango VIP activo.</p></div>
-         <button class="secondary" style="margin-top:8px;width:100%;background:linear-gradient(100deg,#f59e0b,#ef4444);color:#fff" onclick="window.buyVip()">Desbloquear Rango VIP (🪙 100)</button>
-         <div id="vipCustomBox-${id}" class="hidden" style="margin-top:10px">
-           <label>Personalizar título VIP con emojis (<span style="color:var(--gold)">🪙 50</span>)</label>
-           <input id="vipCustomText-${id}" maxlength="15" placeholder="Ej. ⚡ Rey 🔥">
-           <button class="secondary" style="margin-top:6px;width:100%;font-size:0.8rem" onclick="window.saveVipCustom('${id}')">Actualizar Título (🪙 50)</button>
-         </div>
        </div>
      </div>
 
@@ -677,7 +695,6 @@ async function refreshRoom(id, isFirstLoad = false){
   const comments = commentsRes.data || [];
   
   const myCards = getLocalCards().filter(c => !c.is_used);
-  const isVip = getVipStatus();
   
   if(!isFirstLoad) {
     if(questions.length > rObj.lastCount) {
@@ -739,7 +756,6 @@ async function refreshRoom(id, isFirstLoad = false){
         rewardActionHtml = `<span class="tiny muted">Pregunta (Sin monedas)</span>`;
       }
 
-      // Soporte para renderizar imagen o video
       let mediaHtml = '';
       if(q.image_url) {
         if(q.image_url.startsWith("data:video") || q.image_url.includes(".mp4") || q.image_url.includes(".webm")) {
@@ -801,24 +817,6 @@ async function refreshRoom(id, isFirstLoad = false){
       <span class="muted" style="font-size:0.8rem">Efecto: ${safe(c.card_desc || 'Especial')}</span>
      </div>
     `).join("") : '<span class="muted" style="font-size:0.85rem">No tienes cartas activas.</span>';
-  }
-
-  const vipStatus = $(`myVipStatus-${id}`);
-  const vipBtn = $(`buyVipBtn-${id}`);
-  const vipBox = $(`vipCustomBox-${id}`);
-  if(vipStatus) {
-    if (isVip) {
-      vipStatus.innerHTML = `
-       <div class="card-item" style="border-color:var(--gold);background:linear-gradient(135deg,#3b2712,#1a1309)">
-        <strong class="vip-animated-name">${safe(getVipTitle())} <span class="vip-emoji">✨</span></strong><br>
-        <span class="muted" style="font-size:0.8rem">Efecto neón, emojis animados y sonido VIP activos.</span>
-       </div>
-      `;
-      if(vipBox) vipBox.classList.remove("hidden");
-    } else {
-      vipStatus.innerHTML = '<span class="muted" style="font-size:0.85rem">No has adquirido el rango VIP.</span>';
-      if(vipBox) vipBox.classList.add("hidden");
-    }
   }
 
  }catch(e){console.error(e)}
@@ -960,93 +958,38 @@ window.sendComment = async function(roomId, questionId){
  } catch(e) { playFailSound(); alert("Error al responder: " + e.message); }
 };
 
-window.buyCard = async function(){
-  // Buscar la sala activa actual visible
-  const activeTab = document.querySelector('.tab-content.active');
-  if(!activeTab || !activeTab.id.startsWith('tab-room-')) { alert("Entra primero a una sala activa."); return; }
-  const roomId = activeTab.id.replace('tab-room-', '');
-
-  if(profile.coins < 40){ playFailSound(); alert("No tienes suficientes monedas (necesitas 🪙 40)."); return; }
-  try{
-    const socialCards = [
-      {name: "🃏 Carta de Comodín", desc: "Elige a alguien. Si falla, ambos pierden 5 monedas."},
-      {name: "🛡️ Carta de Bloqueo", desc: "Te salvas de hacer el reto y ganas 10 monedas."},
-      {name: "✨ Recompensa Doble", desc: "Duplica la recompensa de un reto (20🪙)."}
-    ];
-    const chosen = socialCards[Math.floor(Math.random()*socialCards.length)];
-    
-    const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
-    if(errGet) throw errGet;
-    
-    const realCoins = curMem ? (curMem.coins || 50) : profile.coins;
-    if(realCoins < 40) { playFailSound(); alert("No tienes suficientes monedas."); return; }
-
-    const newCoins = realCoins - 40;
-    await supabase.from("game_members").update({coins: newCoins}).eq("room_id", roomId).eq("user_id", user.id);
-
-    const cards = getLocalCards();
-    cards.push({
-      id: 'card-' + Date.now() + '-' + Math.random().toString(36,2),
-      card_name: chosen.name,
-      card_desc: chosen.desc,
-      is_used: false
-    });
-    saveLocalCards(cards);
-
-    playSuccessSound();
-    alert("¡Compraste la carta: " + chosen.name + "!");
-    refreshRoom(roomId, false);
-  }catch(e){ playFailSound(); alert("Error al comprar carta: "+e.message); }
-};
-
 window.buyVip = async function(){
-  const activeTab = document.querySelector('.tab-content.active');
-  if(!activeTab || !activeTab.id.startsWith('tab-room-')) { alert("Entra primero a una sala activa."); return; }
-  const roomId = activeTab.id.replace('tab-room-', '');
-
   if(getVipStatus()) { alert("¡Ya tienes el rango VIP activo!"); return; }
   if(profile.coins < 100) { playFailSound(); alert("No tienes suficientes monedas (necesitas 🪙 100)."); return; }
   
   try {
-    const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
-    if(errGet) throw errGet;
-    
-    const realCoins = curMem ? (curMem.coins || 50) : profile.coins;
-    if(realCoins < 100) { playFailSound(); alert("No tienes suficientes monedas."); return; }
-
-    const newCoins = realCoins - 100;
-    await supabase.from("game_members").update({coins: newCoins}).eq("room_id", roomId).eq("user_id", user.id);
+    profile.coins -= 100;
+    $("userCoins").textContent = "🪙 " + profile.coins;
     
     localStorage.setItem("ta_vip_active", "true");
     playVipSound();
     alert("¡Felicidades! Has desbloqueado el Rango VIP 👑.");
-    refreshRoom(roomId, false);
+    renderProfileVipUI();
   } catch(e) {
     playFailSound();
     alert("Error al comprar VIP: " + e.message);
   }
 };
 
-window.saveVipCustom = async function(roomId){
-  const custom = $(`vipCustomText-${roomId}`).value.trim();
+window.saveVipCustom = async function(type){
+  const custom = $(`vipCustomText-${type}`).value.trim();
   if(!custom) { playFailSound(); alert("Escribe un título VIP válido."); return; }
   if(profile.coins < 50) { playFailSound(); alert("No tienes suficientes monedas (necesitas 🪙 50)."); return; }
 
   try {
-    const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
-    if(errGet) throw errGet;
-    
-    const realCoins = curMem ? (curMem.coins || 50) : profile.coins;
-    if(realCoins < 50) { playFailSound(); alert("No tienes suficientes monedas."); return; }
-
-    const newCoins = realCoins - 50;
-    await supabase.from("game_members").update({coins: newCoins}).eq("room_id", roomId).eq("user_id", user.id);
+    profile.coins -= 50;
+    $("userCoins").textContent = "🪙 " + profile.coins;
 
     localStorage.setItem("ta_vip_title", custom);
-    $(`vipCustomText-${roomId}`).value = "";
+    $(`vipCustomText-${type}`).value = "";
     playVipSound();
     alert("¡Título VIP actualizado con éxito!");
-    refreshRoom(roomId, false);
+    renderProfileVipUI();
   } catch(e) {
     playFailSound();
     alert("Error al actualizar título: " + e.message);
