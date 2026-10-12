@@ -129,6 +129,20 @@ function saveProcessedLocal() {
   } catch(e) {}
 }
 
+// Sistema local de cartas para el celular
+function getLocalCards() {
+  try {
+    const saved = localStorage.getItem("ta_my_cards");
+    return saved ? JSON.parse(saved) : [];
+  } catch(e) { return []; }
+}
+
+function saveLocalCards(cards) {
+  try {
+    localStorage.setItem("ta_my_cards", JSON.stringify(cards));
+  } catch(e) {}
+}
+
 window.switchTab = function(tabId, btnElement) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -239,7 +253,6 @@ async function openRoom(id,code,name){
    .on("postgres_changes",{event:"*",schema:"public",table:"game_questions",filter:"room_id=eq."+id},() => refreshRoom(false))
    .on("postgres_changes",{event:"*",schema:"public",table:"game_comments"},() => refreshRoom(false))
    .on("postgres_changes",{event:"*",schema:"public",table:"game_members",filter:"room_id=eq."+id},() => refreshRoom(false))
-   .on("postgres_changes",{event:"*",schema:"public",table:"user_salvation_cards",filter:"room_id=eq."+id},() => refreshRoom(false))
    .subscribe();
  if(refreshTimer) clearInterval(refreshTimer);
  refreshTimer=setInterval(() => refreshRoom(false), 12000);
@@ -248,19 +261,17 @@ async function openRoom(id,code,name){
 async function refreshRoom(isFirstLoad = false){
  if(!currentRoom)return;
  try{
-  const [membersRes, questionsRes, commentsRes, cardsRes]=await Promise.all([
+  const [membersRes, questionsRes, commentsRes]=await Promise.all([
    supabase.from("game_members").select("nickname,avatar,coins,user_id").eq("room_id",currentRoom.id).order("created_at"),
    supabase.from("game_questions").select("*").eq("room_id",currentRoom.id).order("created_at",{ascending:false}).limit(100),
-   supabase.from("game_comments").select("*").order("created_at",{ascending:true}),
-   supabase.from("user_salvation_cards").select("*").eq("room_id",currentRoom.id).eq("user_id",user.id)
+   supabase.from("game_comments").select("*").order("created_at",{ascending:true})
   ]);
   
   const members = membersRes.data || [];
   const questions = questionsRes.data || [];
   const comments = commentsRes.data || [];
   
-  const allCards = cardsRes.data || [];
-  const myCards = allCards.filter(c => c.is_used === false || c.is_used === null || c.is_used === "false" || c.is_used === 0 || c.is_used === undefined);
+  const myCards = getLocalCards().filter(c => !c.is_used);
   
   if(!isFirstLoad) {
     if(questions.length > lastQuestionCount) {
@@ -408,7 +419,11 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
       showToast("Carta de Recompensa Doble aplicada.");
     }
 
-    await supabase.from("user_salvation_cards").update({is_used: true}).eq("id", cardId);
+    // Marcar carta local como usada
+    let cards = getLocalCards();
+    cards = cards.map(c => c.id === cardId ? {...c, is_used: true} : c);
+    saveLocalCards(cards);
+
     await refreshRoom(false);
   } catch(e) {
     alert("Error al aplicar la carta: " + (e.message || e));
@@ -532,10 +547,18 @@ window.buyCard = async function(){
 
   const newCoins = realCoins - 40;
 
+  // Actualizar monedas en Supabase
   await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", user.id);
-  await supabase.from("user_salvation_cards").insert({
-    room_id: currentRoom.id, user_id: user.id, card_name: chosen.name, card_power: 10, card_desc: chosen.desc, is_used: false
+
+  // Guardar la carta localmente en el navegador de forma infalible
+  const cards = getLocalCards();
+  cards.push({
+    id: 'card-' + Date.now() + '-' + Math.random().toString(36.2),
+    card_name: chosen.name,
+    card_desc: chosen.desc,
+    is_used: false
   });
+  saveLocalCards(cards);
 
   alert("¡Compraste la carta: " + chosen.name + "!");
   refreshRoom(false);
