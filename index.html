@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#100c24">
+<title>¿TE ATREVES? — El juego de grupo</title>
+<style>
+:root{--bg:#100c24;--panel:#1b1535;--pink:#ff4fb8;--purple:#a78bfa;--cyan:#67e8f9;--text:#f7f4ff;--muted:#b9b1d5;--line:#40345f;--good:#6ee7b7;--gold:#fde047;--bad:#f87171}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#2a1550 0%,var(--bg) 58%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:center;padding:12px 0 6px}.logo{font-size:clamp(2rem,7vw,3.2rem);font-weight:1000;letter-spacing:-.06em;line-height:1;background:linear-gradient(90deg,var(--cyan),var(--purple),var(--pink));color:transparent;background-clip:text}.tag{color:var(--muted);font-size:0.85rem;margin-top:4px}
+
+.nav-tabs{display:flex;gap:6px;background:rgba(27,21,53,.9);padding:6px;border-radius:16px;border:1px solid var(--line);margin:14px 0;position:sticky;top:10px;z-index:99;backdrop-filter:blur(8px)}
+.tab-btn{flex:1;background:transparent;border:0;border-radius:10px;padding:10px 8px;font:inherit;font-weight:700;font-size:0.85rem;color:var(--muted);cursor:pointer;transition:all .2s;text-align:center}
+.tab-btn.active{background:linear-gradient(100deg,var(--purple),var(--pink));color:#180d2a}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+.card{background:rgba(27,21,53,.96);border:1px solid var(--line);border-radius:20px;padding:18px;margin:12px 0;box-shadow:0 8px 30px #0003}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}h2{font-size:1.15rem;margin:0 0 12px}h3{font-size:1.05rem;margin:0 0 8px}.muted{color:var(--muted);font-size:.9rem}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}input,select,textarea{width:100%;background:#100c24;color:var(--text);border:1px solid #594779;border-radius:12px;padding:12px;font:inherit;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--pink)}label{display:block;color:var(--muted);font-size:0.85rem;margin:10px 0 4px}button{border:0;border-radius:12px;padding:12px 16px;font:inherit;font-weight:800;cursor:pointer;background:linear-gradient(100deg,var(--purple),var(--pink));color:#180d2a}button.secondary{background:#332653;color:var(--text);border:1px solid #594779}button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}.hidden{display:none!important}.status{padding:10px 12px;border-radius:12px;background:#221b3e;color:var(--muted);margin:10px 0;white-space:pre-wrap;font-size:0.9rem}.status.error{color:#fecaca;border:1px solid #7f1d1d}.status.ok{color:var(--good)}.avatars{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px}.avatar{padding:6px;border:2px solid var(--line);border-radius:14px;background:#100c24;cursor:pointer;display:flex;align-items:center;justify-content:center}.avatar.selected{border-color:var(--pink);background:#40204e;transform:scale(1.05)}.avatar img{width:45px;height:45px;border-radius:50%}.roomcode{font-size:1.8rem;letter-spacing:.15em;font-weight:900;color:var(--cyan)}.pill{display:inline-block;background:#372754;border:1px solid var(--line);padding:4px 8px;border-radius:99px;font-size:0.78rem;color:var(--muted)}.player{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;margin:3px;background:#241b40;border-radius:10px;font-size:0.9rem;cursor:pointer;border:1px solid var(--line)}.player:hover{border-color:var(--cyan)}.player img{width:24px;height:24px;border-radius:50%}.question{border:1px solid #564174;background:linear-gradient(135deg,#2a1b4b,#20152f);padding:14px;border-radius:14px;margin:10px 0}.question p{font-size:1rem;margin:0 0 8px}.tiny{font-size:0.78rem;color:var(--muted)}.foot{font-size:0.8rem;color:var(--muted);text-align:center;margin-top:20px}
+.coins-badge{background:#2e234c;border:1px solid var(--gold);color:var(--gold);padding:4px 10px;border-radius:99px;font-weight:700;font-size:0.85rem}
+.card-item{background:linear-gradient(135deg,#322055,#1d1338);border:1px solid var(--purple);border-radius:12px;padding:12px;margin:8px 0}
+.comment-box{background:#15102d;border-radius:8px;padding:6px 10px;margin-top:6px;font-size:0.85rem;border-left:2px solid var(--cyan);display:flex;align-items:center;gap:6px}
+.comment-box img{width:20px;height:20px;border-radius:50%}
+.post-img{width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-top:8px}
+#toastContainer{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;width:92%;max-width:380px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:linear-gradient(135deg,#3b236b,#1e133c);border:1px solid var(--pink);color:var(--text);padding:12px 14px;border-radius:12px;box-shadow:0 6px 24px #0006;pointer-events:auto;animation:slideDown .25s ease;font-size:0.9rem}
+@keyframes slideDown{from{opacity:0;transform:translateY(-15px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="toastContainer"></div>
+<main>
+<header class="brand"><div class="logo">¿TE ATREVES?</div><div class="tag">Retos directos, cartas y control estricto de monedas 🔥</div></header>
+
+<nav class="nav-tabs">
+  <button class="tab-btn active" onclick="window.switchTab('tab-profile', this)">👤 Perfil</button>
+  <button class="tab-btn" onclick="window.switchTab('tab-rooms', this)">🏠 Salas</button>
+  <button id="btnTabGame" class="tab-btn hidden" onclick="window.switchTab('tab-game', this)">🎮 Juego Activo</button>
+</nav>
+
+<section id="app">
+<div id="tab-profile" class="tab-content active">
+<div class="card">
+<div class="row" style="justify-content:space-between"><div><span class="pill">TU PERFIL</span><h2 style="margin-top:8px">Identidad y Monedas</h2></div><div class="row"><span id="userCoins" class="coins-badge">🪙 150</span><button id="saveProfile" class="secondary" style="padding:8px 12px;font-size:0.85rem">Guardar</button></div></div>
+<label>Tu apodo</label><input id="nickname" maxlength="20" placeholder="Ej. GatoCósmico">
+<label>Elige tu avatar original</label><div id="avatarChoices" class="avatars"></div>
+</div>
+<div id="homeMsg" class="status hidden"></div>
+</div>
+
+<div id="tab-rooms" class="tab-content">
+<div class="grid">
+<div class="card"><h2>✨ Crear sala</h2><label>Nombre del grupo</label><input id="newRoomName" maxlength="30" placeholder="Ej. La banda"><button id="createRoom" style="margin-top:10px;width:100%">Crear sala</button></div>
+<div class="card"><h2>🔑 Unirme a sala</h2><label>Código</label><input id="joinCode" maxlength="8" placeholder="Ej. F9138F" style="text-transform:uppercase"><button id="joinRoom" style="margin-top:10px;width:100%">Entrar</button></div>
+</div>
+</div>
+
+<div id="tab-game" class="tab-content">
+<div id="room" class="card">
+<div class="row" style="justify-content:space-between;align-items:flex-start"><div><span class="pill">SALA ACTIVA</span><h2 id="roomTitle" style="margin-top:6px">Mi grupo</h2><div class="muted" style="font-size:0.8rem">Código de invitación</div><div id="roomCode" class="roomcode">------</div></div><div class="row"><button id="copyInvite" class="secondary" style="padding:8px 12px;font-size:0.85rem">Copiar link</button><button id="leaveRoom" class="ghost" style="padding:8px 12px;font-size:0.85rem">Salir</button></div></div>
+<div id="shareLink" class="status" style="font-size:0.8rem;word-break:break-all"></div>
+
+<div class="card" style="background:#15102d;margin-top:14px">
+<h3>🛡️ Tus Cartas de Salvación</h3>
+<p class="muted" style="font-size:0.85rem">Compra cartas (40 monedas): Comodín, Bloqueo o Recompensa Doble.</p>
+<div id="myCardsList"><p class="muted">No tienes cartas activas.</p></div>
+<button id="buyCardBtn" class="secondary" style="margin-top:8px;width:100%">Comprar Carta (🪙 40)</button>
+</div>
+
+<h3 style="margin-top:20px">👥 Jugadores conectados (Toca uno para retarlo directamente)</h3>
+<div id="players"></div>
+<hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+
+<h3>🎲 Publicar reto o pregunta</h3>
+<div id="targetIndicator" class="status hidden" style="border-left:3px solid var(--pink);background:#251638">Reto dirigido a: <strong id="targetNameDisp"></strong> <button class="ghost" style="padding:2px 6px;font-size:0.75rem;float:right" onclick="window.cancelTarget()">Cancelar</button></div>
+
+<label>Tipo</label>
+<select id="qType">
+  <option value="pregunta">❓ Pregunta anónima</option>
+  <option value="reto">🔥 Reto</option>
+</select>
+
+<label>Opción rápida o libre</label>
+<select id="presetSelector">
+  <option value="">✨ Escribir mi propio texto (Libre)...</option>
+  <option value="¿Cuál ha sido el momento más vergonzoso de tu vida?">¿Cuál ha sido el momento más vergonzoso de tu vida?</option>
+  <option value="Muestra la última foto guardada en tu galería">Muestra la última foto guardada en tu galería</option>
+  <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">Si tuvieras que casarte con alguien de este grupo, ¿quién sería?</option>
+  <option value="Imita el comportamiento de un animal durante 30 segundos">Imita el comportamiento de un animal durante 30 segundos</option>
+  <option value="Confiesa cuál fue tu última mentira piadosa">Confiesa cuál fue tu última mentira piadosa</option>
+</select>
+
+<label>Tu texto personalizado</label>
+<textarea id="qText" maxlength="240" rows="2" placeholder="Escribe aquí tu reto o pregunta..."></textarea>
+
+<label>Foto (opcional)</label>
+<input type="file" id="qImageFile" accept="image/*" style="padding:6px;font-size:0.85rem">
+<div class="row" style="margin-top:10px"><button id="postQuestion" style="width:100%">Publicar en el muro</button></div>
+<div id="roomMsg" class="status hidden"></div>
+
+<h3 style="margin-top:22px">💥 Muro de actividad</h3>
+<div id="questions"><p class="muted">Sin publicaciones aún.</p></div>
+</div>
+</div>
+</section>
+<div class="foot">¿TE ATREVES? · Diviértete con tus amigos.</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+
+const SUPABASE_URL = "https://qsjmwuwyqcwmukepekeu.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzam13dXd5cWN3bXVrZXBla2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0ODg0NjksImV4cCI6MjEwNzA2NDQ2OX0.43E5uibPN1eUu2Rf3lIiLIK_6we_MZVzFs_EXDurg8c".trim();
+
+const avatarList = ["Cali", "Buster", "Zoe", "Milo", "Gizmo", "Kiki", "Socks", "Coco", "Nala", "Simba", "Rex", "Luna", "Oscar", "Bella", "Zeus"];
+let supabase = null, user = null, profile = {name:"",avatar:"",coins:150}, selectedAvatar = "", currentRoom = null, roomChannel = null, refreshTimer = null;
+let targetUser = null;
+let lastQuestionCount = 0;
+
+window.switchTab = function(tabId, btnElement) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  $(tabId).classList.add('active');
+  btnElement.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+function status(id, msg, kind="") { const el=$(id); el.textContent=msg; el.className="status"+(kind?" "+kind:""); el.classList.remove("hidden"); }
+function cleanCode(s){return (s||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8)}
+function isUuid(value){return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)}
+
+function getAvatarUrl(seed) { return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(seed)}`; }
+
+function showToast(message) {
+  const container = $("toastContainer");
+  if(!container) return;
+  if(navigator.vibrate) { navigator.vibrate(200); }
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.innerHTML = `🔔 <strong>Aviso:</strong> ${safe(message)}`;
+  container.appendChild(toast);
+  setTimeout(() => { toast.remove(); }, 3500);
+}
+
+function makeAvatars(){
+  const container = $("avatarChoices");
+  if(!container) return;
+  container.innerHTML = "";
+  avatarList.forEach(seed => {
+    const url = getAvatarUrl(seed);
+    const b = document.createElement("button");
+    b.className = "avatar" + (seed === selectedAvatar ? " selected" : "");
+    b.type = "button";
+    b.innerHTML = `<img src="${url}" alt="${seed}">`;
+    b.onclick = () => { selectedAvatar = seed; makeAvatars(); };
+    container.appendChild(b);
+  });
+}
+
+function safe(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+function loadProfile(){
+  profile.name = localStorage.getItem("ta_name") || "";
+  const savedAvatar = localStorage.getItem("ta_avatar");
+  selectedAvatar = savedAvatar || avatarList[0];
+  profile.avatar = getAvatarUrl(selectedAvatar);
+  $("nickname").value = profile.name;
+  makeAvatars();
+}
+
+async function initAutoConnect(){
+ try{
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const {data,error}=await supabase.auth.getSession(); if(error)throw error;
+  if(!data.session){const r=await supabase.auth.signInAnonymously();if(r.error)throw r.error}
+  const {data:ud}=await supabase.auth.getUser();user=ud.user;
+  loadProfile();
+  const params=new URLSearchParams(location.search);const code=params.get("sala");if(code){$("joinCode").value=cleanCode(code);joinRoom()}
+ }catch(e){status("homeMsg","Error al conectar: "+(e.message||e),"error")}
+}
+
+function saveProfile(){
+ const n=$("nickname").value.trim();
+ if(n.length < 2){ status("homeMsg","Elige un apodo de al menos 2 caracteres.","error"); alert("Por favor escribe un apodo de al menos 2 caracteres."); return false; }
+ profile.name = n.slice(0,20);
+ profile.avatar = getAvatarUrl(selectedAvatar);
+ localStorage.setItem("ta_name", profile.name);
+ localStorage.setItem("ta_avatar", selectedAvatar);
+ status("homeMsg","Perfil guardado.","ok");
+ return true;
+}
+
+async function rpc(name,args){const {data,error}=await supabase.rpc(name,args);if(error)throw error;return data}
+
+async function createRoom(){
+ if(!saveProfile()) return;
+ try{
+  const roomName = $("newRoomName").value.trim() || "Mi grupo";
+  const data = await rpc("create_game_room",{p_room_name: roomName, p_nickname: profile.name, p_avatar: profile.avatar});
+  if(!data || !data.room_id) throw new Error("No se pudo obtener el ID de la sala");
+  await openRoom(data.room_id, data.room_code, data.room_name);
+ }catch(e){ status("homeMsg","Error al crear sala: "+e.message,"error"); alert("Error al crear sala: "+e.message); }
+}
+
+async function joinRoom(){
+ if(!saveProfile()) return;
+ const code=cleanCode($("joinCode").value);
+ if(code.length<5){ status("homeMsg","Escribe un código válido.","error"); alert("Escribe un código de sala válido."); return; }
+ try{
+  const data=await rpc("join_game_room",{p_room_code:code,p_nickname:profile.name,p_avatar:profile.avatar});
+  await openRoom(data.room_id,data.room_code,data.room_name);
+ }catch(e){ status("homeMsg","Error al entrar: "+e.message,"error"); alert("Error al entrar a la sala: "+e.message); }
+}
+
+async function openRoom(id,code,name){
+ currentRoom={id,code,name};
+ $("btnTabGame").classList.remove("hidden");
+ window.switchTab('tab-game', $("btnTabGame"));
+
+ $("roomTitle").textContent=name;
+ $("roomCode").textContent=code;
+ $("shareLink").textContent="Invitación: "+location.origin+location.pathname+"?sala="+code;
+ history.replaceState({}, "", location.pathname+"?sala="+code);
+ await refreshRoom(true);
+ if(roomChannel) await supabase.removeChannel(roomChannel);
+ roomChannel=supabase.channel("room-"+id)
+   .on("postgres_changes",{event:"*",schema:"public",table:"game_questions",filter:"room_id=eq."+id},() => refreshRoom(false))
+   .on("postgres_changes",{event:"*",schema:"public",table:"game_comments"},() => refreshRoom(false))
+   .on("postgres_changes",{event:"*",schema:"public",table:"game_members",filter:"room_id=eq."+id},() => refreshRoom(false))
+   .on("postgres_changes",{event:"*",schema:"public",table:"user_salvation_cards",filter:"room_id=eq."+id},() => refreshRoom(false))
+   .subscribe();
+ if(refreshTimer) clearInterval(refreshTimer);
+ refreshTimer=setInterval(() => refreshRoom(false), 12000);
+}
+
+async function refreshRoom(isFirstLoad = false){
+ if(!currentRoom)return;
+ try{
+  const [{data:members},{data:questions},{data:comments},{data:myCards}]=await Promise.all([
+   supabase.from("game_members").select("nickname,avatar,coins,user_id").eq("room_id",currentRoom.id).order("created_at"),
+   supabase.from("game_questions").select("*").eq("room_id",currentRoom.id).order("created_at",{ascending:false}).limit(100),
+   supabase.from("game_comments").select("*").order("created_at",{ascending:true}),
+   supabase.from("user_salvation_cards").select("*").eq("room_id",currentRoom.id).eq("user_id",user.id).eq("is_used",false)
+  ]);
+  
+  if(!isFirstLoad) {
+    if(questions && questions.length > lastQuestionCount) {
+      const latest = questions[0];
+      if(latest.author_id !== user.id) { showToast(`${latest.nickname} publicó algo nuevo.`); }
+    }
+  }
+  lastQuestionCount = questions ? questions.length : 0;
+
+  const me = members.find(m => m.user_id === user.id);
+  if(me) { 
+    profile.coins = me.coins !== undefined ? me.coins : 150; 
+    $("userCoins").textContent = "🪙 " + profile.coins; 
+  }
+
+  $("players").innerHTML = members.length ? members.map(m => `
+    <span class="player" onclick="window.selectTarget('${m.user_id}', '${safe(m.nickname)}')"><img src="${safe(m.avatar)}" alt="avatar"> ${safe(m.nickname)} ${m.user_id===user.id?'(Tú)':''}<span class="tiny" style="color:var(--cyan);margin-left:4px">🎯 Retar</span></span>
+  `).join("") : '<span class="muted">Sin jugadores.</span>';
+  
+  $("questions").innerHTML = questions.length ? questions.map(q => {
+    const qComments = comments ? comments.filter(c => c.question_id === q.id) : [];
+    const isAuthor = q.author_id === user.id;
+    const targetTag = q.target_nickname ? `<span class="pill" style="background:#4a1e4a;margin-bottom:6px">🎯 Dirigido a: ${safe(q.target_nickname)}</span><br>` : '';
+    const cardUsedTag = q.applied_card ? `<span class="pill" style="background:#1e3a4a;color:var(--cyan);margin-bottom:6px">🛡️ Carta aplicada: ${safe(q.applied_card)}</span><br>` : '';
+    
+    // Verificamos si ya está procesado (true)
+    const isClaimed = q.reward_claimed === true;
+
+    let cardButtonsHtml = '';
+    if(!isClaimed && myCards && myCards.length > 0) {
+      cardButtonsHtml = `<div style="margin-top:8px;padding:8px;background:#100c24;border-radius:10px">
+        <span class="tiny" style="color:var(--gold);font-weight:bold">Aplicar carta de tu inventario:</span>
+        <div class="row" style="margin-top:4px">
+          ${myCards.map(c => `<button class="secondary" style="padding:4px 8px;font-size:0.75rem" onclick="window.applyCardToQuestion('${q.id}', '${c.id}', '${safe(c.card_name)}')">Usar ${safe(c.card_name)}</button>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    let rewardActionHtml = '';
+    if (!isClaimed) {
+      const isReto = q.kind === 'reto';
+      const recompensaTexto = isReto ? '✅ Cumplió (🪙10 o Doble)' : '✅ Cumplió';
+      rewardActionHtml = `
+        <div class="row" style="gap:4px">
+          <button class="secondary" style="padding:4px 8px;font-size:0.75rem;background:#10b981;color:#fff" onclick="window.confirmReward('${q.id}')">${recompensaTexto}</button>
+          <button class="secondary" style="padding:4px 8px;font-size:0.75rem;background:var(--bad);color:#fff" onclick="window.confirmFail('${q.id}')">❌ No (-🪙10)</button>
+        </div>`;
+    } else {
+      rewardActionHtml = `<span class="tiny" style="color:var(--good);font-weight:bold">✔️ Procesado</span>`;
+    }
+
+    return `
+     <article class="question" id="q-box-${q.id}">
+      <div class="row" style="justify-content:space-between">
+       <span class="pill">${safe({pregunta:"❓ Pregunta",reto:"🔥 Reto"}[q.kind]||"Reto")}</span>
+       <span class="tiny">${new Date(q.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+      <div style="margin-top:8px">
+       ${targetTag}
+       ${cardUsedTag}
+       <p style="margin:4px 0">${safe(q.body)}</p>
+      </div>
+      ${q.image_url ? `<img src="${q.image_url}" class="post-img" alt="Foto">` : ''}
+      
+      <div class="row" style="margin-top:6px;gap:6px;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:6px">
+          <img src="${safe(q.avatar)}" style="width:20px;height:20px;border-radius:50%" alt="av">
+          <span class="tiny">Por ${safe(q.nickname)}</span>
+        </div>
+        <div>
+          ${rewardActionHtml}
+        </div>
+      </div>
+
+      <div>
+        ${!isClaimed ? cardButtonsHtml : ''}
+      </div>
+      
+      <div style="margin-top:12px;border-top:1px solid var(--line);padding-top:8px">
+       <div class="tiny" style="font-weight:bold;margin-bottom:4px">💬 Respuestas</div>
+       <div>
+        ${qComments.length ? qComments.map(c => `
+         <div class="comment-box"><img src="${safe(c.avatar)}" alt="av"><strong>${safe(c.nickname)}:</strong>${safe(c.body)}</div>
+        `).join("") : '<span class="tiny muted">Sin respuestas aún.</span>'}
+       </div>
+       <div class="row" style="margin-top:6px">
+        <input type="text" id="comment-input-${q.id}" placeholder="Escribe tu respuesta..." maxlength="140" style="padding:8px;font-size:0.85rem">
+        <button class="secondary" style="padding:8px 10px;font-size:0.85rem" onclick="window.sendComment('${q.id}')">Enviar</button>
+       </div>
+      </div>
+     </article>
+    `;
+  }).join("") : '<p class="muted">No hay publicaciones todavía.</p>';
+  
+  $("myCardsList").innerHTML = myCards && myCards.length ? myCards.map(c => `
+   <div class="card-item">
+    <strong>🛡️ ${safe(c.card_name)}</strong><br>
+    <span class="muted" style="font-size:0.8rem">Efecto: ${safe(c.card_desc || 'Especial')}</span>
+   </div>
+  `).join("") : '<span class="muted" style="font-size:0.85rem">No tienes cartas activas.</span>';
+ }catch(e){console.error(e)}
+}
+
+window.selectTarget = function(userId, nickname){
+  if(!isUuid(userId)){
+    targetUser = null;
+    $("targetIndicator").classList.add("hidden");
+    status("roomMsg", "Falta el identificador del usuario.", "error");
+    return;
+  }
+  targetUser = { id: userId, name: nickname };
+  $("targetNameDisp").textContent = nickname;
+  $("targetIndicator").classList.remove("hidden");
+  showToast(`Has seleccionado a ${nickname} para tu próximo reto.`);
+};
+
+window.cancelTarget = function(){
+  targetUser = null;
+  $("targetIndicator").classList.add("hidden");
+};
+
+window.applyCardToQuestion = async function(questionId, cardId, cardName){
+  if(!currentRoom || !user) { alert("Entra primero a una sala."); return; }
+  if(!confirm(`¿Usar la carta "${cardName}" en esta publicación?`)) return;
+
+  try {
+    const {data: card, error: errCardRead} = await supabase
+      .from("user_salvation_cards")
+      .select("id,card_name,is_used,room_id,user_id")
+      .eq("id", cardId)
+      .eq("room_id", currentRoom.id)
+      .eq("user_id", user.id)
+      .eq("is_used", false)
+      .single();
+    if(errCardRead) throw errCardRead;
+    if(!card) throw new Error("Esta carta ya se utilizó.");
+
+    const {data: qData} = await supabase.from("game_questions").select("*").eq("id", questionId).single();
+    if(!qData) throw new Error("Publicación no encontrada");
+
+    if (cardName.includes("Comodín")) {
+      await supabase.from("game_questions").update({applied_card: "🃏 Carta de Comodín aplicada"}).eq("id", questionId);
+      showToast("Carta Comodín aplicada.");
+    } else if (cardName.includes("Bloqueo")) {
+      const targetId = qData.target_user_id || user.id;
+      const {data: targetMember} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", targetId).single();
+      const currentCoins = targetMember ? (targetMember.coins || 0) : 150;
+      
+      await supabase.from("game_members").update({coins: currentCoins + 10}).eq("room_id", currentRoom.id).eq("user_id", targetId);
+      await supabase.from("game_questions").update({applied_card: "🛡️ Carta de Bloqueo (Salvado +10🪙)", reward_claimed: true}).eq("id", questionId);
+      showToast("¡Bloqueo exitoso! Te has salvado y ganado 10 monedas.");
+    } else if (cardName.includes("Recompensa Doble")) {
+      if(qData.kind !== 'reto') {
+        alert("La carta de Recompensa Doble solo se puede usar en Retos.");
+        return;
+      }
+      await supabase.from("game_questions").update({applied_card: "✨ Recompensa Doble Activada (20🪙)"}).eq("id", questionId);
+      showToast("Carta de Recompensa Doble aplicada.");
+    }
+
+    await supabase.from("user_salvation_cards").update({is_used: true}).eq("id", cardId);
+    await refreshRoom(false);
+  } catch(e) {
+    alert("Error al aplicar la carta: " + (e.message || e));
+    await refreshRoom(false);
+  }
+};
+
+window.confirmReward = async function(questionId){
+  try {
+    const {data: qData} = await supabase.from("game_questions").select("*").eq("id", questionId).single();
+    if(!qData) throw new Error("Publicación no encontrada");
+    
+    if(qData.reward_claimed === true) {
+      alert("¡Esta recompensa ya fue procesada!");
+      refreshRoom(false);
+      return;
+    }
+    
+    let targetId = qData.target_user_id || qData.author_id;
+    const {data: targetMember, error: errFetch} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", targetId).single();
+    if(errFetch) throw errFetch;
+
+    const currentCoins = targetMember ? (targetMember.coins !== undefined ? targetMember.coins : 150) : 150;
+    
+    let premio = 10;
+    if(qData.kind === 'reto' && qData.applied_card && qData.applied_card.includes("Doble")) {
+      premio = 20;
+    }
+    if(qData.kind !== 'reto') {
+      premio = 0;
+    }
+
+    const newCoins = currentCoins + premio;
+
+    await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", targetId);
+    await supabase.from("game_questions").update({reward_claimed: true, applied_card: (qData.applied_card || "") + " ✔️ Cumplido"}).eq("id", questionId);
+
+    showToast(`¡Cumplido! Se otorgaron ${premio} monedas.`);
+    await refreshRoom(false);
+  } catch(e) {
+    alert("Error al confirmar: " + (e.message || e));
+    refreshRoom(false);
+  }
+};
+
+window.confirmFail = async function(questionId){
+  if(!confirm("¿Confirmas que NO cumplió? Se le restarán 10 monedas (permite saldo negativo).")) return;
+  try {
+    const {data: qData} = await supabase.from("game_questions").select("*").eq("id", questionId).single();
+    if(!qData) throw new Error("Publicación no encontrada");
+
+    if(qData.reward_claimed === true) {
+      alert("¡Esta publicación ya fue procesada!");
+      refreshRoom(false);
+      return;
+    }
+
+    let targetId = qData.target_user_id || qData.author_id;
+    const {data: targetMember, error: errFetch} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", targetId).single();
+    if(errFetch) throw errFetch;
+
+    const currentCoins = targetMember ? (targetMember.coins !== undefined ? targetMember.coins : 150) : 150;
+    const newCoins = currentCoins - 10;
+
+    if(qData.applied_card && qData.applied_card.includes("Comodín")) {
+      const authorId = qData.author_id;
+      const {data: authorMem} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", authorId).single();
+      const authorCoins = authorMem ? (authorMem.coins || 150) : 150;
+      
+      await supabase.from("game_members").update({coins: authorCoins - 5}).eq("room_id", currentRoom.id).eq("user_id", authorId);
+      showToast("Comodín fallido: -5 monedas a ambos.");
+    }
+
+    await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", targetId);
+    await supabase.from("game_questions").update({reward_claimed: true, applied_card: "❌ No cumplió (-10🪙)"}).eq("id", questionId);
+
+    showToast("Se restaron 10 monedas por incumplimiento.");
+    await refreshRoom(false);
+  } catch(e) {
+    alert("Error: " + (e.message || e));
+    refreshRoom(false);
+  }
+};
+
+window.sendComment = async function(questionId){
+ const input = $(`comment-input-${questionId}`);
+ if(!input) return;
+ const body = input.value.trim();
+ if(body.length < 2) { alert("Escribe una respuesta."); return; }
+ try {
+  const {error} = await supabase.from("game_comments").insert({
+    question_id: questionId, user_id: user.id, nickname: profile.name, avatar: profile.avatar, body: body
+  });
+  if(error) throw error;
+  input.value = "";
+  refreshRoom(false);
+ } catch(e) { alert("Error al responder: " + e.message); }
+};
+
+window.buyCard = async function(){
+ if(!currentRoom)return;
+ if(profile.coins < 40){alert("No tienes suficientes monedas (necesitas 🪙 40).");return;}
+ try{
+  const socialCards = [
+    {name: "🃏 Carta de Comodín", desc: "Elige a alguien. Si falla, ambos pierden 5 monedas."},
+    {name: "🛡️ Carta de Bloqueo", desc: "Te salvas de hacer el reto y ganas 10 monedas."},
+    {name: "✨ Recompensa Doble", desc: "Duplica la recompensa de un reto (20🪙)."}
+  ];
+  const chosen = socialCards[Math.floor(Math.random()*socialCards.length)];
+  
+  const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", user.id).single();
+  if(errGet) throw errGet;
+  
+  const realCoins = curMem ? (curMem.coins || 150) : profile.coins;
+  if(realCoins < 40) { alert("No tienes suficientes monedas."); return; }
+
+  const newCoins = realCoins - 40;
+
+  await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", user.id);
+  await supabase.from("user_salvation_cards").insert({
+    room_id: currentRoom.id, user_id: user.id, card_name: chosen.name, card_power: 10, card_desc: chosen.desc, is_used: false
+  });
+
+  alert("¡Compraste la carta: " + chosen.name + "!");
+  refreshRoom(false);
+ }catch(e){alert("Error al comprar carta: "+e.message)}
+};
+
+$("presetSelector").onchange = (e) => {
+  const val = e.target.value;
+  if(val) { $("qText").value = val; }
+};
+
+async function postQuestion(){
+ if(!currentRoom||!saveProfile())return;
+ if(!isUuid(currentRoom.id)){ status("roomMsg", "Identificador de sala no válido.", "error"); return; }
+ if(!user || !isUuid(user.id)){ status("roomMsg", "Identificador de usuario no válido.", "error"); return; }
+ if(targetUser && !isUuid(targetUser.id)){ targetUser = null; $("targetIndicator").classList.add("hidden"); }
+ const body=$("qText").value.trim();
+ const fileInput=$("qImageFile");
+ if(body.length<2 && (!fileInput.files || fileInput.files.length === 0)){
+   status("roomMsg","Escribe un texto o sube una foto.","error");
+   return;
+ }
+ try{
+  let imageUrl = null;
+  if(fileInput.files && fileInput.files[0]){
+    const file = fileInput.files[0];
+    imageUrl = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
+  }
+  const {error}=await supabase.from("game_questions").insert({
+    room_id: currentRoom.id, 
+    author_id: user.id, 
+    nickname: profile.name, 
+    avatar: profile.avatar, 
+    kind: $("qType").value, 
+    body: body || "📸 Foto del reto:", 
+    image_url: imageUrl,
+    target_user_id: targetUser ? targetUser.id : null,
+    target_nickname: targetUser ? targetUser.name : null,
+    reward_claimed: false
+  });
+  if(error)throw error;
+
+  $("qText").value=""; $("presetSelector").value=""; fileInput.value="";
+  window.cancelTarget();
+  status("roomMsg","¡Publicado con éxito!","ok");
+  refreshRoom(false);
+ }catch(e){status("roomMsg","Error al publicar: "+e.message,"error")}
+}
+
+async function leaveRoom(){
+  if(roomChannel){await supabase.removeChannel(roomChannel);roomChannel=null}
+  if(refreshTimer)clearInterval(refreshTimer);
+  currentRoom=null;
+  $("btnTabGame").classList.add("hidden");
+  window.switchTab('tab-rooms', document.querySelectorAll('.tab-btn')[1]);
+  history.replaceState({}, "", location.pathname);
+}
+
+$("saveProfile").onclick = saveProfile;
+$("createRoom").onclick = createRoom;
+$("joinRoom").onclick = joinRoom;
+$("postQuestion").onclick = postQuestion;
+$("leaveRoom").onclick = leaveRoom;
+$("buyCardBtn").onclick = window.buyCard;
+$("joinCode").addEventListener("input", e => e.target.value = cleanCode(e.target.value));
+$("copyInvite").onclick = async () => {
+  const url = location.origin + location.pathname + "?sala=" + currentRoom.code;
+  try{ await navigator.clipboard.writeText(url); status("roomMsg","Enlace copiado.","ok"); }
+  catch(e){ status("roomMsg","Código: "+currentRoom.code,"ok"); }
+};
+
+initAutoConnect();
+})();
+</script></body></html>
