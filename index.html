@@ -135,14 +135,12 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 <label>Opción rápida o libre</label>
 <select id="presetSelector">
   <option value="">✨ Escribir mi propio texto (Libre)...</option>
-  <!-- Preguntas -->
   <option value="¿Cuál ha sido el momento más vergonzoso de tu vida?">❓ ¿Cuál ha sido el momento más vergonzoso de tu vida?</option>
   <option value="Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?">❓ Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?</option>
   <option value="¿Cuál es el secreto más grande que le has ocultado a tus padres?">❓ ¿Cuál es el secreto más grande que le has ocultado a tus padres?</option>
   <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">❓ Si tuvieras que casarte con alguien de este grupo, ¿quién sería?</option>
   <option value="¿Cuál ha sido tu peor cita en la vida real?">❓ ¿Cuál ha sido tu peor cita en la vida real?</option>
   <option value="¿Qué es lo más extraño que has comprado en internet a las 3 AM?">❓ ¿Qué es lo más extraño que has comprado en internet a las 3 AM?</option>
-  <!-- Retos -->
   <option value="Muestra la última foto guardada en tu galería sin vergüenza">🔥 Muestra la última foto guardada en tu galería sin vergüenza</option>
   <option value="Llama al contacto número 5 de tu teléfono y cántale los primeros 10 segundos de una canción">🔥 Llama al contacto número 5 de tu teléfono y cántale una canción</option>
   <option value="Imita el comportamiento de un animal durante 30 segundos en medio de la sala">🔥 Imita el comportamiento de un animal durante 30 segundos</option>
@@ -185,7 +183,6 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const avatarList = ["Cali", "Buster", "Zoe", "Milo", "Gizmo", "Kiki", "Socks", "Coco", "Nala", "Simba", "Rex", "Luna", "Oscar", "Bella", "Zeus"];
 
-// CATÁLOGO DE STICKERS
 const catalogStickers = [
   {id: 'stk_1', name: '', url: './stickers/1614807225.webp'},
   {id: 'stk_2', name: '', url: './stickers/1614807248.webp'},
@@ -265,12 +262,13 @@ function getVipTitle() {
 function playVipSound() {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') { audioCtx.resume(); }
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -282,13 +280,14 @@ function playVipSound() {
 function playSuccessSound() {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') { audioCtx.resume(); }
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
     osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.12);
     osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.24);
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -300,12 +299,13 @@ function playSuccessSound() {
 function playFailSound() {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') { audioCtx.resume(); }
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(220, audioCtx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.3);
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -413,7 +413,7 @@ function renderStickersUI() {
 }
 
 window.buySticker = async function(stickerId) {
-  if(profile.coins < 30) { alert("No tienes suficientes monedas (necesitas 🪙 30)."); return; }
+  if(profile.coins < 30) { playFailSound(); alert("No tienes suficientes monedas (necesitas 🪙 30)."); return; }
   const unlocked = getUnlockedStickers();
   if(unlocked.includes(stickerId)) return;
 
@@ -422,7 +422,7 @@ window.buySticker = async function(stickerId) {
       const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", user.id).single();
       if(!errGet && curMem) {
         const realCoins = curMem.coins !== undefined ? curMem.coins : profile.coins;
-        if(realCoins < 30) { alert("No tienes suficientes monedas."); return; }
+        if(realCoins < 30) { playFailSound(); alert("No tienes suficientes monedas."); return; }
         await supabase.from("game_members").update({coins: realCoins - 30}).eq("room_id", currentRoom.id).eq("user_id", user.id);
         profile.coins = realCoins - 30;
         $("userCoins").textContent = "🪙 " + profile.coins;
@@ -438,12 +438,14 @@ window.buySticker = async function(stickerId) {
     showToast("¡Sticker desbloqueado con éxito!");
     renderStickersUI();
   } catch(e) {
+    playFailSound();
     alert("Error al comprar sticker: " + e.message);
   }
 };
 
 window.downloadSticker = async function(url, name) {
   try {
+    playSuccessSound();
     showToast("Preparando sticker para WhatsApp...");
     const response = await fetch(url);
     const blob = await response.blob();
@@ -480,11 +482,12 @@ async function initAutoConnect(){
 
 function saveProfile(){
  const n=$("nickname").value.trim();
- if(n.length < 2){ status("homeMsg","Elige un apodo de al menos 2 caracteres.","error"); alert("Por favor escribe un apodo de al menos 2 caracteres."); return false; }
+ if(n.length < 2){ playFailSound(); status("homeMsg","Elige un apodo de al menos 2 caracteres.","error"); alert("Por favor escribe un apodo de al menos 2 caracteres."); return false; }
  profile.name = n.slice(0,20);
  profile.avatar = getAvatarUrl(selectedAvatar);
  localStorage.setItem("ta_name", profile.name);
  localStorage.setItem("ta_avatar", selectedAvatar);
+ playSuccessSound();
  status("homeMsg","Perfil guardado.","ok");
  return true;
 }
@@ -497,18 +500,20 @@ async function createRoom(){
   const roomName = $("newRoomName").value.trim() || "Mi grupo";
   const data = await rpc("create_game_room",{p_room_name: roomName, p_nickname: profile.name, p_avatar: profile.avatar});
   if(!data || !data.room_id) throw new Error("No se pudo obtener el ID de la sala");
+  playSuccessSound();
   await openRoom(data.room_id, data.room_code, data.room_name);
- }catch(e){ status("homeMsg","Error al crear sala: "+e.message,"error"); alert("Error al crear sala: "+e.message); }
+ }catch(e){ playFailSound(); status("homeMsg","Error al crear sala: "+e.message,"error"); alert("Error al crear sala: "+e.message); }
 }
 
 async function joinRoom(){
  if(!saveProfile()) return;
  const code=cleanCode($("joinCode").value);
- if(code.length<5){ status("homeMsg","Escribe un código válido.","error"); alert("Escribe un código de sala válido."); return; }
+ if(code.length<5){ playFailSound(); status("homeMsg","Escribe un código válido.","error"); alert("Escribe un código de sala válido."); return; }
  try{
   const data=await rpc("join_game_room",{p_room_code:code,p_nickname:profile.name,p_avatar:profile.avatar});
+  playSuccessSound();
   await openRoom(data.room_id,data.room_code,data.room_name);
- }catch(e){ status("homeMsg","Error al entrar: "+e.message,"error"); alert("Error al entrar a la sala: "+e.message); }
+ }catch(e){ playFailSound(); status("homeMsg","Error al entrar: "+e.message,"error"); alert("Error al entrar a la sala: "+e.message); }
 }
 
 async function openRoom(id,code,name){
@@ -698,12 +703,14 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
   try {
     const {data: qData} = await supabase.from("game_questions").select("*").eq("id", questionId).single();
     if(!qData) throw new Error("Publicación no encontrada");
-    if(qData.kind !== 'reto') { alert("Las cartas de salvación solo aplican para Retos."); return; }
+    if(qData.kind !== 'reto') { playFailSound(); alert("Las cartas de salvación solo aplican para Retos."); return; }
 
     if (cardName.includes("Comodín")) {
+      playSuccessSound();
       await supabase.from("game_questions").update({applied_card: "🃏 Carta de Comodín aplicada"}).eq("id", questionId);
       showToast("Carta Comodín aplicada.");
     } else if (cardName.includes("Bloqueo")) {
+      playSuccessSound();
       const targetId = qData.target_user_id || user.id;
       const {data: targetMember} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", targetId).single();
       const currentCoins = targetMember ? (targetMember.coins || 0) : 50;
@@ -712,6 +719,7 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
       await supabase.from("game_questions").update({applied_card: "🛡️ Carta de Bloqueo (Salvado +10🪙)", reward_claimed: true}).eq("id", questionId);
       showToast("¡Bloqueo exitoso! Te has salvado y ganado 10 monedas.");
     } else if (cardName.includes("Recompensa Doble")) {
+      playSuccessSound();
       await supabase.from("game_questions").update({applied_card: "✨ Recompensa Doble Activada (20🪙)"}).eq("id", questionId);
       showToast("Carta de Recompensa Doble aplicada.");
     }
@@ -722,6 +730,7 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
 
     await refreshRoom(false);
   } catch(e) {
+    playFailSound();
     alert("Error al aplicar la carta: " + (e.message || e));
     await refreshRoom(false);
   }
@@ -803,20 +812,21 @@ window.sendComment = async function(questionId){
  const input = $(`comment-input-${questionId}`);
  if(!input) return;
  const body = input.value.trim();
- if(body.length < 2) { alert("Escribe una respuesta."); return; }
+ if(body.length < 2) { playFailSound(); alert("Escribe una respuesta."); return; }
  try {
   const {error} = await supabase.from("game_comments").insert({
     question_id: questionId, user_id: user.id, nickname: profile.name, avatar: profile.avatar, body: body
   });
   if(error) throw error;
+  playSuccessSound();
   input.value = "";
   refreshRoom(false);
- } catch(e) { alert("Error al responder: " + e.message); }
+ } catch(e) { playFailSound(); alert("Error al responder: " + e.message); }
 };
 
 window.buyCard = async function(){
  if(!currentRoom)return;
- if(profile.coins < 40){alert("No tienes suficientes monedas (necesitas 🪙 40).");return;}
+ if(profile.coins < 40){playFailSound(); alert("No tienes suficientes monedas (necesitas 🪙 40).");return;}
  try{
   const socialCards = [
     {name: "🃏 Carta de Comodín", desc: "Elige a alguien. Si falla, ambos pierden 5 monedas."},
@@ -829,7 +839,7 @@ window.buyCard = async function(){
   if(errGet) throw errGet;
   
   const realCoins = curMem ? (curMem.coins || 50) : profile.coins;
-  if(realCoins < 40) { alert("No tienes suficientes monedas."); return; }
+  if(realCoins < 40) { playFailSound(); alert("No tienes suficientes monedas."); return; }
 
   const newCoins = realCoins - 40;
   await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", user.id);
@@ -843,22 +853,23 @@ window.buyCard = async function(){
   });
   saveLocalCards(cards);
 
+  playSuccessSound();
   alert("¡Compraste la carta: " + chosen.name + "!");
   refreshRoom(false);
- }catch(e){alert("Error al comprar carta: "+e.message)}
+ }catch(e){playFailSound(); alert("Error al comprar carta: "+e.message)}
 };
 
 $("buyVipBtn").onclick = async function(){
   if(!currentRoom) { alert("Entra primero a una sala."); return; }
   if(getVipStatus()) { alert("¡Ya tienes el rango VIP activo!"); return; }
-  if(profile.coins < 100) { alert("No tienes suficientes monedas (necesitas 🪙 100)."); return; }
+  if(profile.coins < 100) { playFailSound(); alert("No tienes suficientes monedas (necesitas 🪙 100)."); return; }
   
   try {
     const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", user.id).single();
     if(errGet) throw errGet;
     
     const realCoins = curMem ? (curMem.coins || 50) : profile.coins;
-    if(realCoins < 100) { alert("No tienes suficientes monedas."); return; }
+    if(realCoins < 100) { playFailSound(); alert("No tienes suficientes monedas."); return; }
 
     const newCoins = realCoins - 100;
     await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", user.id);
@@ -868,6 +879,7 @@ $("buyVipBtn").onclick = async function(){
     alert("¡Felicidades! Has desbloqueado el Rango VIP 👑.");
     refreshRoom(false);
   } catch(e) {
+    playFailSound();
     alert("Error al comprar VIP: " + e.message);
   }
 };
@@ -875,15 +887,15 @@ $("buyVipBtn").onclick = async function(){
 $("saveVipCustomBtn").onclick = async function(){
   if(!currentRoom) return;
   const custom = $("vipCustomText").value.trim();
-  if(!custom) { alert("Escribe un título VIP válido."); return; }
-  if(profile.coins < 50) { alert("No tienes suficientes monedas (necesitas 🪙 50)."); return; }
+  if(!custom) { playFailSound(); alert("Escribe un título VIP válido."); return; }
+  if(profile.coins < 50) { playFailSound(); alert("No tienes suficientes monedas (necesitas 🪙 50)."); return; }
 
   try {
     const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", user.id).single();
     if(errGet) throw errGet;
     
     const realCoins = curMem ? (curMem.coins || 50) : profile.coins;
-    if(realCoins < 50) { alert("No tienes suficientes monedas."); return; }
+    if(realCoins < 50) { playFailSound(); alert("No tienes suficientes monedas."); return; }
 
     const newCoins = realCoins - 50;
     await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", user.id);
@@ -894,6 +906,7 @@ $("saveVipCustomBtn").onclick = async function(){
     alert("¡Título VIP actualizado con éxito!");
     refreshRoom(false);
   } catch(e) {
+    playFailSound();
     alert("Error al actualizar título: " + e.message);
   }
 };
@@ -912,6 +925,7 @@ async function postQuestion(){
  const fileInput=$("qImageFile");
  
  if(body.length<2 && (!fileInput.files || fileInput.files.length === 0) && !selectedStickerUrl){
+   playFailSound();
    status("roomMsg","Escribe un texto, sube una foto o selecciona un sticker.","error");
    return;
  }
@@ -952,7 +966,7 @@ async function postQuestion(){
   status("roomMsg","¡Publicado con éxito!","ok");
   playVipSound();
   refreshRoom(false);
- }catch(e){status("roomMsg","Error al publicar: "+e.message,"error")}
+ }catch(e){playFailSound(); status("roomMsg","Error al publicar: "+e.message,"error")}
 }
 
 async function leaveRoom(){
@@ -973,8 +987,8 @@ $("buyCardBtn").onclick = window.buyCard;
 $("joinCode").addEventListener("input", e => e.target.value = cleanCode(e.target.value));
 $("copyInvite").onclick = async () => {
   const url = location.origin + location.pathname + "?sala=" + currentRoom.code;
-  try{ await navigator.clipboard.writeText(url); status("roomMsg","Enlace copiado.","ok"); }
-  catch(e){ status("roomMsg","Código: "+currentRoom.code,"ok"); }
+  try{ await navigator.clipboard.writeText(url); playSuccessSound(); status("roomMsg","Enlace copiado.","ok"); }
+  catch(e){ playFailSound(); status("roomMsg","Código: "+currentRoom.code,"ok"); }
 };
 
 initAutoConnect();
