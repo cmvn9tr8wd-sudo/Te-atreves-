@@ -66,7 +66,7 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 <section id="app">
 <div id="tab-profile" class="tab-content active">
 <div class="card">
-<div class="row" style="justify-content:space-between"><div><span class="pill">TU PERFIL</span><h2 style="margin-top:8px">Identidad y Monedas</h2></div><div class="row"><span id="userCoins" class="coins-badge">🪙 150</span><button id="saveProfile" class="secondary" style="padding:8px 12px;font-size:0.85rem">Guardar</button></div></div>
+<div class="row" style="justify-content:space-between"><div><span class="pill">TU PERFIL</span><h2 style="margin-top:8px">Identidad y Monedas</h2></div><div class="row"><span id="userCoins" class="coins-badge">🪙 50</span><button id="saveProfile" class="secondary" style="padding:8px 12px;font-size:0.85rem">Guardar</button></div></div>
 <label>Tu apodo</label><input id="nickname" maxlength="20" placeholder="Ej. GatoCósmico">
 <label>Elige tu avatar original</label><div id="avatarChoices" class="avatars"></div>
 </div>
@@ -128,16 +128,29 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 
 <label>Tipo</label>
 <select id="qType">
-  <option value="pregunta">❓ Pregunta anónima</option>
+  <option value="pregunta">❓ Pregunta</option>
   <option value="reto">🔥 Reto</option>
 </select>
 
 <label>Opción rápida o libre</label>
 <select id="presetSelector">
   <option value="">✨ Escribir mi propio texto (Libre)...</option>
-  <option value="¿Cuál ha sido el momento más vergonzoso de tu vida?">¿Cuál ha sido el momento más vergonzoso de tu vida?</option>
-  <option value="Muestra la última foto guardada en tu galería">Muestra la última foto guardada en tu galería</option>
-  <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">Si tuvieras que casarte con alguien de este grupo, ¿quién sería?</option>
+  <!-- Preguntas -->
+  <option value="¿Cuál ha sido el momento más vergonzoso de tu vida?">❓ ¿Cuál ha sido el momento más vergonzoso de tu vida?</option>
+  <option value="Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?">❓ Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?</option>
+  <option value="¿Cuál es el secreto más grande que le has ocultado a tus padres?">❓ ¿Cuál es el secreto más grande que le has ocultado a tus padres?</option>
+  <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">❓ Si tuvieras que casarte con alguien de este grupo, ¿quién sería?</option>
+  <option value="¿Cuál ha sido tu peor cita en la vida real?">❓ ¿Cuál ha sido tu peor cita en la vida real?</option>
+  <option value="¿Qué es lo más extraño que has comprado en internet a las 3 AM?">❓ ¿Qué es lo más extraño que has comprado en internet a las 3 AM?</option>
+  <!-- Retos -->
+  <option value="Muestra la última foto guardada en tu galería sin vergüenza">🔥 Muestra la última foto guardada en tu galería sin vergüenza</option>
+  <option value="Llama al contacto número 5 de tu teléfono y cántale los primeros 10 segundos de una canción">🔥 Llama al contacto número 5 de tu teléfono y cántale una canción</option>
+  <option value="Imita el comportamiento de un animal durante 30 segundos en medio de la sala">🔥 Imita el comportamiento de un animal durante 30 segundos</option>
+  <option value="Deja que el grupo revise tus últimas 5 búsquedas en Google">🔥 Deja que el grupo revise tus últimas 5 búsquedas en Google</option>
+  <option value="Envía un audio diciendo tu más grande ridículo al chat de tu ex o de un grupo familiar">🔥 Envía un audio diciendo tu más grande ridículo a un chat familiar</option>
+  <option value="Haz tu mejor pasarela de modelos por toda la habitación">🔥 Haz tu mejor pasarela de modelos por toda la habitación</option>
+  <option value="Deja que la persona a tu derecha te dibuje un bigote con pluma en la cara">🔥 Deja que te dibujen un bigote con pluma en la cara</option>
+  <option value="Habla con acento extraño (español de España o argentino muy exagerado) durante las próximas 3 rondas">🔥 Habla con acento exagerado durante las próximas 3 rondas</option>
 </select>
 
 <label>Tu texto personalizado</label>
@@ -172,7 +185,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const avatarList = ["Cali", "Buster", "Zoe", "Milo", "Gizmo", "Kiki", "Socks", "Coco", "Nala", "Simba", "Rex", "Luna", "Oscar", "Bella", "Zeus"];
 
-// CATÁLOGO CON TUS 20 STICKERS ORIGINALES DE GITHUB
+// CATÁLOGO DE STICKERS
 const catalogStickers = [
   {id: 'stk_1', name: '', url: './stickers/1614807225.webp'},
   {id: 'stk_2', name: '', url: './stickers/1614807248.webp'},
@@ -198,15 +211,7 @@ const catalogStickers = [
   {id: 'stk_22', name: '', url: './stickers/1614807422.webp'}
 ];
 
-
-
-
-
-
-
-
-
-let supabase = null, user = null, profile = {name:"",avatar:"",coins:150}, selectedAvatar = "", currentRoom = null, roomChannel = null, refreshTimer = null;
+let supabase = null, user = null, profile = {name:"",avatar:"",coins:50}, selectedAvatar = "", currentRoom = null, roomChannel = null, refreshTimer = null;
 let targetUser = null;
 let lastQuestionCount = 0;
 let selectedStickerUrl = null;
@@ -370,8 +375,8 @@ function renderStickersUI() {
       const st = catalogStickers.find(s => s.id === id);
       if(!st) return '';
       return `
-        <div class="sticker-item" onclick="window.downloadSticker('${st.url}', '${st.name}')" title="Toca para descargar a WhatsApp">
-          <img src="${st.url}" alt="${st.name}">
+        <div class="sticker-item" onclick="window.downloadSticker('${st.url}', 'sticker_${st.id}')" title="Toca para descargar a WhatsApp">
+          <img src="${st.url}" alt="sticker">
           <div class="tiny" style="color:var(--cyan);margin-top:4px">📥 Descargar</div>
         </div>
       `;
@@ -384,9 +389,8 @@ function renderStickersUI() {
       const isOwned = unlocked.includes(st.id);
       return `
         <div class="sticker-item">
-          <img src="${st.url}" alt="${st.name}">
-          <div class="tiny" style="font-weight:bold">${st.name}</div>
-          ${isOwned ? '<span class="tiny" style="color:var(--good)">✔️ Adquirido</span>' : `<button class="secondary" style="padding:4px;font-size:0.7rem;margin-top:4px;width:100%" onclick="window.buySticker('${st.id}')">🪙 30</button>`}
+          <img src="${st.url}" alt="sticker">
+          ${isOwned ? '<span class="tiny" style="color:var(--good);margin-top:4px;display:block">✔️ Adquirido</span>' : `<button class="secondary" style="padding:4px;font-size:0.7rem;margin-top:4px;width:100%" onclick="window.buySticker('${st.id}')">🪙 30</button>`}
         </div>
       `;
     }).join('');
@@ -401,7 +405,7 @@ function renderStickersUI() {
         const isSel = selectedStickerUrl === st.url;
         return `
           <div class="sticker-item ${isSel?'selected':''}" onclick="window.selectStickerForPost('${st.url}')" style="padding:4px">
-            <img src="${st.url}" style="width:36px;height:36px" alt="${st.name}">
+            <img src="${st.url}" style="width:36px;height:36px" alt="sticker">
           </div>
         `;
       }).join('');
@@ -446,7 +450,7 @@ window.downloadSticker = async function(url, name) {
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
-    a.download = `${name.replace(/\s+/g, '_')}_sticker.png`;
+    a.download = `${name}_sticker.webp`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -577,7 +581,7 @@ async function refreshRoom(isFirstLoad = false){
     }
 
     let cardButtonsHtml = '';
-    if(!isClaimed && myCards.length > 0) {
+    if(!isClaimed && q.kind === 'reto' && myCards.length > 0) {
       cardButtonsHtml = `<div style="margin-top:8px;padding:8px;background:#100c24;border-radius:10px">
         <span class="tiny" style="color:var(--gold);font-weight:bold">Aplicar carta de tu inventario:</span>
         <div class="row" style="margin-top:4px">
@@ -587,16 +591,18 @@ async function refreshRoom(isFirstLoad = false){
     }
 
     let rewardActionHtml = '';
-    if (!isClaimed) {
-      const isReto = q.kind === 'reto';
-      const recompensaTexto = isReto ? '✅ Cumplió (🪙10 )' : '✅ Cumplió';
-      rewardActionHtml = `
-        <div class="row" style="gap:4px">
-          <button id="btn-rew-${q.id}" class="secondary" style="padding:4px 8px;font-size:0.75rem;background:#10b981;color:#fff" onclick="window.confirmReward('${q.id}')">${recompensaTexto}</button>
-          <button id="btn-fail-${q.id}" class="secondary" style="padding:4px 8px;font-size:0.75rem;background:var(--bad);color:#fff" onclick="window.confirmFail('${q.id}')">❌ No (-🪙10)</button>
-        </div>`;
+    if (q.kind === 'reto') {
+      if (!isClaimed) {
+        rewardActionHtml = `
+          <div class="row" style="gap:4px">
+            <button id="btn-rew-${q.id}" class="secondary" style="padding:4px 8px;font-size:0.75rem;background:#10b981;color:#fff" onclick="window.confirmReward('${q.id}')">✅ Cumplió (🪙10 o Doble)</button>
+            <button id="btn-fail-${q.id}" class="secondary" style="padding:4px 8px;font-size:0.75rem;background:var(--bad);color:#fff" onclick="window.confirmFail('${q.id}')">❌ No (-🪙10)</button>
+          </div>`;
+      } else {
+        rewardActionHtml = `<span class="tiny" style="color:var(--good);font-weight:bold">✔️ Reto Procesado</span>`;
+      }
     } else {
-      rewardActionHtml = `<span class="tiny" style="color:var(--good);font-weight:bold">✔️ Procesado</span>`;
+      rewardActionHtml = `<span class="tiny muted">Pregunta (Sin monedas)</span>`;
     }
 
     return `
@@ -623,7 +629,7 @@ async function refreshRoom(isFirstLoad = false){
       </div>
 
       <div id="card-wrap-${q.id}">
-        ${!isClaimed ? cardButtonsHtml : ''}
+        ${!isClaimed && q.kind === 'reto' ? cardButtonsHtml : ''}
       </div>
       
       <div style="margin-top:12px;border-top:1px solid var(--line);padding-top:8px">
@@ -692,6 +698,7 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
   try {
     const {data: qData} = await supabase.from("game_questions").select("*").eq("id", questionId).single();
     if(!qData) throw new Error("Publicación no encontrada");
+    if(qData.kind !== 'reto') { alert("Las cartas de salvación solo aplican para Retos."); return; }
 
     if (cardName.includes("Comodín")) {
       await supabase.from("game_questions").update({applied_card: "🃏 Carta de Comodín aplicada"}).eq("id", questionId);
@@ -699,16 +706,12 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
     } else if (cardName.includes("Bloqueo")) {
       const targetId = qData.target_user_id || user.id;
       const {data: targetMember} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", targetId).single();
-      const currentCoins = targetMember ? (targetMember.coins || 0) : 150;
+      const currentCoins = targetMember ? (targetMember.coins || 0) : 50;
       
       await supabase.from("game_members").update({coins: currentCoins + 10}).eq("room_id", currentRoom.id).eq("user_id", targetId);
       await supabase.from("game_questions").update({applied_card: "🛡️ Carta de Bloqueo (Salvado +10🪙)", reward_claimed: true}).eq("id", questionId);
       showToast("¡Bloqueo exitoso! Te has salvado y ganado 10 monedas.");
     } else if (cardName.includes("Recompensa Doble")) {
-      if(qData.kind !== 'reto') {
-        alert("La carta de Recompensa Doble solo se puede usar en Retos.");
-        return;
-      }
       await supabase.from("game_questions").update({applied_card: "✨ Recompensa Doble Activada (20🪙)"}).eq("id", questionId);
       showToast("Carta de Recompensa Doble aplicada.");
     }
@@ -742,14 +745,11 @@ window.confirmReward = async function(questionId){
     const {data: targetMember, error: errFetch} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", targetId).single();
     if(errFetch) throw errFetch;
 
-    const currentCoins = targetMember ? (targetMember.coins !== undefined ? targetMember.coins : 150) : 150;
+    const currentCoins = targetMember ? (targetMember.coins !== undefined ? targetMember.coins : 50) : 50;
     
     let premio = 10;
-    if(qData.kind === 'reto' && qData.applied_card && qData.applied_card.includes("Doble")) {
+    if(qData.applied_card && qData.applied_card.includes("Doble")) {
       premio = 20;
-    }
-    if(qData.kind !== 'reto') {
-      premio = 0;
     }
 
     const newCoins = currentCoins + premio;
@@ -785,7 +785,7 @@ window.confirmFail = async function(questionId){
     const {data: targetMember, error: errFetch} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", targetId).single();
     if(errFetch) throw errFetch;
 
-    const currentCoins = targetMember ? (targetMember.coins !== undefined ? targetMember.coins : 150) : 150;
+    const currentCoins = targetMember ? (targetMember.coins !== undefined ? targetMember.coins : 50) : 50;
     const newCoins = currentCoins - 10;
 
     await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", targetId);
@@ -828,7 +828,7 @@ window.buyCard = async function(){
   const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", user.id).single();
   if(errGet) throw errGet;
   
-  const realCoins = curMem ? (curMem.coins || 150) : profile.coins;
+  const realCoins = curMem ? (curMem.coins || 50) : profile.coins;
   if(realCoins < 40) { alert("No tienes suficientes monedas."); return; }
 
   const newCoins = realCoins - 40;
@@ -857,7 +857,7 @@ $("buyVipBtn").onclick = async function(){
     const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", user.id).single();
     if(errGet) throw errGet;
     
-    const realCoins = curMem ? (curMem.coins || 150) : profile.coins;
+    const realCoins = curMem ? (curMem.coins || 50) : profile.coins;
     if(realCoins < 100) { alert("No tienes suficientes monedas."); return; }
 
     const newCoins = realCoins - 100;
@@ -882,7 +882,7 @@ $("saveVipCustomBtn").onclick = async function(){
     const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", user.id).single();
     if(errGet) throw errGet;
     
-    const realCoins = curMem ? (curMem.coins || 150) : profile.coins;
+    const realCoins = curMem ? (curMem.coins || 50) : profile.coins;
     if(realCoins < 50) { alert("No tienes suficientes monedas."); return; }
 
     const newCoins = realCoins - 50;
@@ -929,17 +929,19 @@ async function postQuestion(){
   let authorName = profile.name;
   if(getVipStatus()) { authorName = getVipTitle() + " " + profile.name + " [VIP]"; }
 
+  const qKind = $("qType").value;
+
   const {error}=await supabase.from("game_questions").insert({
     room_id: currentRoom.id, 
     author_id: user.id, 
     nickname: authorName, 
     avatar: profile.avatar, 
-    kind: $("qType").value, 
+    kind: qKind, 
     body: body || (selectedStickerUrl ? "✨ Sticker compartido:" : "📸 Foto del reto:"), 
     image_url: imageUrl,
     target_user_id: targetUser ? targetUser.id : null,
     target_nickname: targetUser ? targetUser.name : null,
-    reward_claimed: false
+    reward_claimed: qKind === 'pregunta' ? true : false
   });
   if(error)throw error;
 
