@@ -120,7 +120,7 @@ const processedLocally = new Set();
 
 try {
   const saved = localStorage.getItem("ta_processed_questions");
-  if(saved) { parsed = JSON.parse(saved); parsed.forEach(id => processedLocally.add(id)); }
+  if(saved) { JSON.parse(saved).forEach(id => processedLocally.add(id)); }
 } catch(e) {}
 
 function saveProcessedLocal() {
@@ -252,15 +252,15 @@ async function refreshRoom(isFirstLoad = false){
    supabase.from("game_members").select("nickname,avatar,coins,user_id").eq("room_id",currentRoom.id).order("created_at"),
    supabase.from("game_questions").select("*").eq("room_id",currentRoom.id).order("created_at",{ascending:false}).limit(100),
    supabase.from("game_comments").select("*").order("created_at",{ascending:true}),
-   supabase.from("user_salvation_cards").select("*").eq("room_id",currentRoom.id).eq("user_id",user.id)
+   supabase.from("user_salvation_cards").select("*").eq("room_id",currentRoom.id)
   ]);
   
   const members = membersRes.data || [];
   const questions = questionsRes.data || [];
   const comments = commentsRes.data || [];
   
-  // Filtro flexible para asegurar que las cartas aparezcan correctamente sin importar cómo se guardó el booleano
-  const myCards = (cardsRes.data || []).filter(c => c.is_used === false || c.is_used === null || c.is_used === "false" || c.is_used === 0 || c.is_used === undefined);
+  const allCards = cardsRes.data || [];
+  const myCards = allCards.filter(c => String(c.user_id) === String(user.id) && (c.is_used === false || c.is_used === null || c.is_used === "false" || c.is_used === 0 || c.is_used === undefined));
   
   if(!isFirstLoad) {
     if(questions.length > lastQuestionCount) {
