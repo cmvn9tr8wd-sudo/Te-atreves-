@@ -51,6 +51,36 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
   animation: bounceEmoji 1.2s infinite ease-in-out;
 }
 
+/* ESTILOS AVATAR 3D TILT HOLOGRÁFICO */
+.avatar-3d-container {
+  perspective: 1000px;
+  display: inline-block;
+  margin: 10px auto;
+}
+.avatar-3d-card {
+  width: 110px;
+  height: 110px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #2a1550, #1b1535);
+  border: 2px solid var(--pink);
+  box-shadow: 0 10px 25px rgba(255, 79, 184, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+.avatar-3d-card img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  transform: translateZ(30px); /* Efecto 3D flotante */
+  object-fit: cover;
+}
+
 /* INTRO CREATIVO */
 #introScreen {
   position: fixed;
@@ -105,7 +135,6 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 </head>
 <body>
 
-<!-- INTRO CREATIVO -->
 <div id="introScreen">
   <div class="intro-title">¿TE ATREVES?</div>
   <p class="intro-subtitle">Retos extremos, preguntas picantes, cartas y diversión en grupo 🔥</p>
@@ -128,11 +157,19 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 <div class="row" style="justify-content:space-between"><div><span class="pill">TU PERFIL</span><h2 style="margin-top:8px">Identidad y Monedas</h2></div><div class="row"><span id="userCoins" class="coins-badge">🪙 50</span><button id="saveProfile" class="secondary" style="padding:8px 12px;font-size:0.85rem">Guardar</button></div></div>
 <label>Tu apodo</label><input id="nickname" maxlength="20" placeholder="Ej. GatoCósmico">
 
-<label>Elige tu avatar original</label>
+<label>Tu Avatar 3D Activo</label>
+<div style="text-align:center">
+  <div class="avatar-3d-container">
+    <div class="avatar-3d-card" id="preview3dCard" data-tilt data-tilt-max="25" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.5">
+      <img id="preview3dImg" src="" alt="Avatar 3D">
+    </div>
+  </div>
+</div>
+
+<label style="margin-top:10px">Elige tu avatar robótico base</label>
 <div id="avatarChoices" class="avatars"></div>
 
-<!-- AVATAR PERSONALIZADO -->
-<label style="margin-top:14px">O sube tu propia foto de avatar</label>
+<label style="margin-top:14px">O sube tu propia foto para tu Avatar 3D</label>
 <input type="file" id="customAvatarFile" accept="image/*" style="padding:6px;font-size:0.85rem">
 
 <label>O pega el enlace (URL) de tu imagen</label>
@@ -245,6 +282,8 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 <div class="foot">¿TE ATREVES? · Diviértete con tus amigos.</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Librería Vanilla Tilt para el efecto 3D holográfico -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
 <script>
 (() => {
 const $ = id => document.getElementById(id);
@@ -412,6 +451,12 @@ function getAvatarUrl(seed) {
   return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(seed || 'Cali')}`; 
 }
 
+function update3dPreview() {
+  const url = getAvatarUrl(selectedAvatar);
+  const img = $("preview3dImg");
+  if(img) img.src = url;
+}
+
 function showToast(message) {
   const container = $("toastContainer");
   if(!container) return;
@@ -433,7 +478,7 @@ function makeAvatars(){
     b.className = "avatar" + (seed === selectedAvatar ? " selected" : "");
     b.type = "button";
     b.innerHTML = `<img src="${url}" alt="${seed}">`;
-    b.onclick = () => { selectedAvatar = seed; makeAvatars(); };
+    b.onclick = () => { selectedAvatar = seed; makeAvatars(); update3dPreview(); };
     container.appendChild(b);
   });
 }
@@ -447,6 +492,7 @@ function loadProfile(){
   profile.avatar = getAvatarUrl(selectedAvatar);
   $("nickname").value = profile.name;
   makeAvatars();
+  update3dPreview();
   renderStickersUI();
 }
 
@@ -455,8 +501,9 @@ $("applyCustomAvatar").onclick = () => {
   if(!url) { playFailSound(); alert("Escribe un enlace de imagen válido."); return; }
   selectedAvatar = url;
   makeAvatars();
+  update3dPreview();
   playSuccessSound();
-  showToast("Avatar personalizado aplicado.");
+  showToast("Avatar 3D personalizado aplicado.");
 };
 
 $("customAvatarFile").onchange = (e) => {
@@ -466,8 +513,9 @@ $("customAvatarFile").onchange = (e) => {
   reader.onload = (event) => {
     selectedAvatar = event.target.result;
     makeAvatars();
+    update3dPreview();
     playSuccessSound();
-    showToast("Foto de avatar cargada con éxito.");
+    showToast("Foto cargada en el Avatar 3D con éxito.");
   };
   reader.readAsDataURL(file);
 };
@@ -1089,7 +1137,7 @@ $("createRoom").onclick = createRoom;
 $("joinRoom").onclick = joinRoom;
 $("postQuestion").onclick = postQuestion;
 $("leaveRoom").onclick = leaveRoom;
-$("buyCardBtn").onclick = window.buyCard;
+$("buyCardCardBtn" in window ? "buyCardBtn" : "buyCardBtn").onclick = window.buyCard;
 $("joinCode").addEventListener("input", e => e.target.value = cleanCode(e.target.value));
 $("copyInvite").onclick = async () => {
   const url = location.origin + location.pathname + "?sala=" + currentRoom.code;
