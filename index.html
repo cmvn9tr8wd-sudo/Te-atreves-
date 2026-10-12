@@ -1,3 +1,178 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#100c24">
+<title>¿TE ATREVES? — El juego de grupo</title>
+<style>
+:root{--bg:#100c24;--panel:#1b1535;--pink:#ff4fb8;--purple:#a78bfa;--cyan:#67e8f9;--text:#f7f4ff;--muted:#b9b1d5;--line:#40345f;--good:#6ee7b7;--gold:#fde047;--bad:#f87171}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#2a1550 0%,var(--bg) 58%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:center;padding:12px 0 6px}.logo{font-size:clamp(2rem,7vw,3.2rem);font-weight:1000;letter-spacing:-.06em;line-height:1;background:linear-gradient(90deg,var(--cyan),var(--purple),var(--pink));color:transparent;background-clip:text}.tag{color:var(--muted);font-size:0.85rem;margin-top:4px}
+
+.nav-tabs{display:flex;gap:6px;background:rgba(27,21,53,.9);padding:6px;border-radius:16px;border:1px solid var(--line);margin:14px 0;position:sticky;top:10px;z-index:99;backdrop-filter:blur(8px)}
+.tab-btn{flex:1;background:transparent;border:0;border-radius:10px;padding:10px 8px;font:inherit;font-weight:700;font-size:0.85rem;color:var(--muted);cursor:pointer;transition:all .2s;text-align:center}
+.tab-btn.active{background:linear-gradient(100deg,var(--purple),var(--pink));color:#180d2a}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+.card{background:rgba(27,21,53,.96);border:1px solid var(--line);border-radius:20px;padding:18px;margin:12px 0;box-shadow:0 8px 30px #0003}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}h2{font-size:1.15rem;margin:0 0 12px}h3{font-size:1.05rem;margin:0 0 8px}.muted{color:var(--muted);font-size:.9rem}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}input,select,textarea{width:100%;background:#100c24;color:var(--text);border:1px solid #594779;border-radius:12px;padding:12px;font:inherit;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--pink)}label{display:block;color:var(--muted);font-size:0.85rem;margin:10px 0 4px}button{border:0;border-radius:12px;padding:12px 16px;font:inherit;font-weight:800;cursor:pointer;background:linear-gradient(100deg,var(--purple),var(--pink));color:#180d2a}button.secondary{background:#332653;color:var(--text);border:1px solid #594779}button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}.hidden{display:none!important}.status{padding:10px 12px;border-radius:12px;background:#221b3e;color:var(--muted);margin:10px 0;white-space:pre-wrap;font-size:0.9rem}.status.error{color:#fecaca;border:1px solid #7f1d1d}.status.ok{color:var(--good)}.avatars{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px}.avatar{padding:6px;border:2px solid var(--line);border-radius:14px;background:#100c24;cursor:pointer;display:flex;align-items:center;justify-content:center}.avatar.selected{border-color:var(--pink);background:#40204e;transform:scale(1.05)}.avatar img{width:45px;height:45px;border-radius:50%}.roomcode{font-size:1.8rem;letter-spacing:.15em;font-weight:900;color:var(--cyan)}.pill{display:inline-block;background:#372754;border:1px solid var(--line);padding:4px 8px;border-radius:99px;font-size:0.78rem;color:var(--muted)}.player{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;margin:3px;background:#241b40;border-radius:10px;font-size:0.9rem;cursor:pointer;border:1px solid var(--line)}.player:hover{border-color:var(--cyan)}.player img{width:24px;height:24px;border-radius:50%}.question{border:1px solid #564174;background:linear-gradient(135deg,#2a1b4b,#20152f);padding:14px;border-radius:14px;margin:10px 0}.question p{font-size:1rem;margin:0 0 8px}.tiny{font-size:0.78rem;color:var(--muted)}.foot{font-size:0.8rem;color:var(--muted);text-align:center;margin-top:20px}
+.coins-badge{background:#2e234c;border:1px solid var(--gold);color:var(--gold);padding:4px 10px;border-radius:99px;font-weight:700;font-size:0.85rem}
+.card-item{background:linear-gradient(135deg,#322055,#1d1338);border:1px solid var(--purple);border-radius:12px;padding:12px;margin:8px 0}
+.comment-box{background:#15102d;border-radius:8px;padding:6px 10px;margin-top:6px;font-size:0.85rem;border-left:2px solid var(--cyan);display:flex;align-items:center;gap:6px}
+.comment-box img{width:20px;height:20px;border-radius:50%}
+.post-img{width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-top:8px}
+
+.sticker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:8px}
+.sticker-item{background:#120c24;border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;cursor:pointer;transition:transform .15s}
+.sticker-item:hover{transform:scale(1.05);border-color:var(--pink)}
+.sticker-item img{width:56px;height:56px;object-fit:contain}
+.chat-sticker{max-width:90px;max-height:90px;object-fit:contain;margin-top:4px}
+
+#toastContainer{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;width:92%;max-width:380px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:linear-gradient(135deg,#3b236b,#1e133c);border:1px solid var(--pink);color:var(--text);padding:12px 14px;border-radius:12px;box-shadow:0 6px 24px #0006;pointer-events:auto;animation:slideDown .25s ease;font-size:0.9rem}
+@keyframes slideDown{from{opacity:0;transform:translateY(-15px)}to{opacity:1;transform:translateY(0)}}
+
+@keyframes neonGlow {
+  0% { text-shadow: 0 0 5px #ff4fb8, 0 0 10px #ff4fb8, 0 0 20px #67e8f9; }
+  50% { text-shadow: 0 0 10px #67e8f9, 0 0 20px #ff4fb8, 0 0 30px #a78bfa; }
+  100% { text-shadow: 0 0 5px #ff4fb8, 0 0 10px #ff4fb8, 0 0 20px #67e8f9; }
+}
+@keyframes bounceEmoji {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px) scale(1.2); }
+}
+.vip-animated-name {
+  animation: neonGlow 2s infinite alternate;
+  color: #fde047 !important;
+  font-weight: 900;
+}
+.vip-emoji {
+  display: inline-block;
+  animation: bounceEmoji 1.2s infinite ease-in-out;
+}
+</style>
+</head>
+<body>
+<div id="toastContainer"></div>
+<main>
+<header class="brand"><div class="logo">¿TE ATREVES?</div><div class="tag">Retos, cartas, estatus VIP y tus stickers 🔥</div></header>
+
+<nav class="nav-tabs">
+  <button class="tab-btn active" onclick="window.switchTab('tab-profile', this)">👤 Perfil</button>
+  <button class="tab-btn" onclick="window.switchTab('tab-rooms', this)">🏠 Salas</button>
+  <button id="btnTabGame" class="tab-btn hidden" onclick="window.switchTab('tab-game', this)">🎮 Juego Activo</button>
+</nav>
+
+<section id="app">
+<div id="tab-profile" class="tab-content active">
+<div class="card">
+<div class="row" style="justify-content:space-between"><div><span class="pill">TU PERFIL</span><h2 style="margin-top:8px">Identidad y Monedas</h2></div><div class="row"><span id="userCoins" class="coins-badge">🪙 50</span><button id="saveProfile" class="secondary" style="padding:8px 12px;font-size:0.85rem">Guardar</button></div></div>
+<label>Tu apodo</label><input id="nickname" maxlength="20" placeholder="Ej. GatoCósmico">
+<label>Elige tu avatar original</label><div id="avatarChoices" class="avatars"></div>
+</div>
+
+<div class="card">
+  <h3>🖼️ Mis Stickers Desbloqueados (Listos para WhatsApp)</h3>
+  <p class="muted" style="font-size:0.85rem">Toca cualquier sticker de tu colección para descargarlo directamente a tu celular.</p>
+  <div id="myStickersCollection" class="sticker-grid"><p class="muted">No tienes stickers en tu colección aún.</p></div>
+</div>
+
+<div class="card">
+  <h3>✨ Tienda de Stickers (🪙 30 c/u)</h3>
+  <p class="muted" style="font-size:0.85rem">Desbloquea tus stickers para usarlos en el juego y WhatsApp.</p>
+  <div id="stickerStoreList" class="sticker-grid"></div>
+</div>
+
+<div id="homeMsg" class="status hidden"></div>
+</div>
+
+<div id="tab-rooms" class="tab-content">
+<div class="grid">
+<div class="card"><h2>✨ Crear sala</h2><label>Nombre del grupo</label><input id="newRoomName" maxlength="30" placeholder="Ej. La banda"><button id="createRoom" style="margin-top:10px;width:100%">Crear sala</button></div>
+<div class="card"><h2>🔑 Unirme a sala</h2><label>Código</label><input id="joinCode" maxlength="8" placeholder="Ej. F9138F" style="text-transform:uppercase"><button id="joinRoom" style="margin-top:10px;width:100%">Entrar</button></div>
+</div>
+</div>
+
+<div id="tab-game" class="tab-content">
+<div id="room" class="card">
+<div class="row" style="justify-content:space-between;align-items:flex-start"><div><span class="pill">SALA ACTIVA</span><h2 id="roomTitle" style="margin-top:6px">Mi grupo</h2><div class="muted" style="font-size:0.8rem">Código de invitación</div><div id="roomCode" class="roomcode">------</div></div><div class="row"><button id="copyInvite" class="secondary" style="padding:8px 12px;font-size:0.85rem">Copiar link</button><button id="leaveRoom" class="ghost" style="padding:8px 12px;font-size:0.85rem">Salir</button></div></div>
+<div id="shareLink" class="status" style="font-size:0.8rem;word-break:break-all"></div>
+
+<div class="grid" style="margin-top:14px">
+  <div class="card" style="background:#15102d;margin:0">
+  <h3>🛡️ Tus Cartas de Salvación</h3>
+  <p class="muted" style="font-size:0.85rem">Compra cartas (🪙 40): Comodín, Bloqueo o Recompensa Doble.</p>
+  <div id="myCardsList"><p class="muted">No tienes cartas activas.</p></div>
+  <button id="buyCardBtn" class="secondary" style="margin-top:8px;width:100%">Comprar Carta (🪙 40)</button>
+  </div>
+
+  <div class="card" style="background:#15102d;margin:0">
+  <h3>👑 Tienda de Estatus VIP & Neón</h3>
+  <p class="muted" style="font-size:0.85rem">Desbloquea neón, emojis animados y sonido especial (🪙 100).</p>
+  <div id="myVipStatus"><p class="muted">Sin rango VIP activo.</p></div>
+  <button id="buyVipBtn" class="secondary" style="margin-top:8px;width:100%;background:linear-gradient(100deg,#f59e0b,#ef4444);color:#fff">Desbloquear Rango VIP (🪙 100)</button>
+  <div id="vipCustomBox" class="hidden" style="margin-top:10px">
+    <label>Personalizar título VIP con emojis (<span style="color:var(--gold)">🪙 50</span>)</label>
+    <input id="vipCustomText" maxlength="15" placeholder="Ej. ⚡ Rey 🔥">
+    <button id="saveVipCustomBtn" class="secondary" style="margin-top:6px;width:100%;font-size:0.8rem">Actualizar Título (🪙 50)</button>
+  </div>
+  </div>
+</div>
+
+<h3 style="margin-top:20px">👥 Jugadores conectados (Toca uno para retarlo directamente)</h3>
+<div id="players"></div>
+<hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+
+<h3>🎲 Publicar reto o pregunta</h3>
+<div id="targetIndicator" class="status hidden" style="border-left:3px solid var(--pink);background:#251638">Reto dirigido a: <strong id="targetNameDisp"></strong> <button class="ghost" style="padding:2px 6px;font-size:0.75rem;float:right" onclick="window.cancelTarget()">Cancelar</button></div>
+
+<label>Tipo</label>
+<select id="qType">
+  <option value="pregunta">❓ Pregunta</option>
+  <option value="reto">🔥 Reto</option>
+</select>
+
+<label>Opción rápida o libre</label>
+<select id="presetSelector">
+  <option value="">✨ Escribir mi propio texto (Libre)...</option>
+  <option value="¿Cuál ha sido el momento más vergonzoso de tu vida?">❓ ¿Cuál ha sido el momento más vergonzoso de tu vida?</option>
+  <option value="Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?">❓ Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?</option>
+  <option value="¿Cuál es el secreto más grande que le has ocultado a tus padres?">❓ ¿Cuál es el secreto más grande que le has ocultado a tus padres?</option>
+  <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">❓ Si tuvieras que casarte con alguien de este grupo, ¿quién sería?</option>
+  <option value="¿Cuál ha sido tu peor cita en la vida real?">❓ ¿Cuál ha sido tu peor cita en la vida real?</option>
+  <option value="¿Qué es lo más extraño que has comprado en internet a las 3 AM?">❓ ¿Qué es lo más extraño que has comprado en internet a las 3 AM?</option>
+  <option value="Muestra la última foto guardada en tu galería sin vergüenza">🔥 Muestra la última foto guardada en tu galería sin vergüenza</option>
+  <option value="Llama al contacto número 5 de tu teléfono y cántale los primeros 10 segundos de una canción">🔥 Llama al contacto número 5 de tu teléfono y cántale una canción</option>
+  <option value="Imita el comportamiento de un animal durante 30 segundos en medio de la sala">🔥 Imita el comportamiento de un animal durante 30 segundos</option>
+  <option value="Deja que el grupo revise tus últimas 5 búsquedas en Google">🔥 Deja que el grupo revise tus últimas 5 búsquedas en Google</option>
+  <option value="Envía un audio diciendo tu más grande ridículo al chat de tu ex o de un grupo familiar">🔥 Envía un audio diciendo tu más grande ridículo a un chat familiar</option>
+  <option value="Haz tu mejor pasarela de modelos por toda la habitación">🔥 Haz tu mejor pasarela de modelos por toda la habitación</option>
+  <option value="Deja que la persona a tu derecha te dibuje un bigote con pluma en la cara">🔥 Deja que te dibujen un bigote con pluma en la cara</option>
+  <option value="Habla con acento extraño (español de España o argentino muy exagerado) durante las próximas 3 rondas">🔥 Habla con acento exagerado durante las próximas 3 rondas</option>
+</select>
+
+<label>Tu texto personalizado</label>
+<textarea id="qText" maxlength="240" rows="2" placeholder="Escribe aquí tu reto o pregunta..."></textarea>
+
+<label>Foto o Sticker</label>
+<div class="row">
+  <input type="file" id="qImageFile" accept="image/*" style="padding:6px;font-size:0.85rem;flex:1">
+</div>
+<div id="stickerPickerBox" style="margin-top:8px">
+  <span class="tiny" style="color:var(--gold)">O envía un sticker de tu colección:</span>
+  <div id="activeStickerSelector" class="sticker-grid" style="max-height:100px;overflow-y:auto"></div>
+</div>
+
+<div class="row" style="margin-top:10px"><button id="postQuestion" style="width:100%">Publicar en el muro</button></div>
+<div id="roomMsg" class="status hidden"></div>
+
+<h3 style="margin-top:22px">💥 Muro de actividad</h3>
+<div id="questions"><p class="muted">Sin publicaciones aún.</p></div>
+</div>
+</div>
+</section>
+<div class="foot">¿TE ATREVES? · Diviértete con tus amigos.</div>
+</main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (() => {
@@ -151,10 +326,7 @@ function status(id, msg, kind="") { const el=$(id); el.textContent=msg; el.class
 function cleanCode(s){return (s||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8)}
 function isUuid(value){return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)}
 
-function getAvatarUrl(seed) { 
-  if (seed && seed.startsWith("http")) return seed;
-  return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(seed || 'Cali')}`; 
-}
+function getAvatarUrl(seed) { return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(seed)}`; }
 
 function showToast(message) {
   const container = $("toastContainer");
@@ -193,29 +365,6 @@ function loadProfile(){
   makeAvatars();
   renderStickersUI();
 }
-
-// SOPORTE PARA SUBIR O PEGAR AVATAR PERSONALIZADO
-$("applyCustomAvatar").onclick = () => {
-  const url = $("customAvatarUrl").value.trim();
-  if(!url) { alert("Escribe un enlace de imagen válido."); return; }
-  selectedAvatar = url;
-  makeAvatars();
-  playSuccessSound();
-  showToast("Avatar personalizado aplicado.");
-};
-
-$("customAvatarFile").onchange = (e) => {
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    selectedAvatar = event.target.result; // Convierte la foto local a Base64
-    makeAvatars();
-    playSuccessSound();
-    showToast("Foto de avatar cargada con éxito.");
-  };
-  reader.readAsDataURL(file);
-};
 
 function renderStickersUI() {
   const unlocked = getUnlockedStickers();
@@ -844,4 +993,4 @@ $("copyInvite").onclick = async () => {
 
 initAutoConnect();
 })();
-</script>
+</script></body></html>
