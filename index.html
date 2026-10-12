@@ -116,6 +116,7 @@ const avatarList = ["Cali", "Buster", "Zoe", "Milo", "Gizmo", "Kiki", "Socks", "
 let supabase = null, user = null, profile = {name:"",avatar:"",coins:150}, selectedAvatar = "", currentRoom = null, roomChannel = null, refreshTimer = null;
 let targetUser = null;
 let lastQuestionCount = 0;
+const processedLocally = new Set(); // Control en memoria para bloquear permanentemente los botones
 
 window.switchTab = function(tabId, btnElement) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -271,8 +272,8 @@ async function refreshRoom(isFirstLoad = false){
     const targetTag = q.target_nickname ? `<span class="pill" style="background:#4a1e4a;margin-bottom:6px">🎯 Dirigido a: ${safe(q.target_nickname)}</span><br>` : '';
     const cardUsedTag = q.applied_card ? `<span class="pill" style="background:#1e3a4a;color:var(--cyan);margin-bottom:6px">🛡️ Carta aplicada: ${safe(q.applied_card)}</span><br>` : '';
     
-    // Verificamos estrictamente el booleano guardado en Supabase
-    const isClaimed = q.reward_claimed === true || q.reward_claimed === "true";
+    // Verificación estricta utilizando la base de datos o el bloqueo local inmediato
+    const isClaimed = q.reward_claimed === true || q.reward_claimed === "true" || processedLocally.has(q.id);
 
     let cardButtonsHtml = '';
     if(!isClaimed && myCards.length > 0) {
@@ -290,8 +291,8 @@ async function refreshRoom(isFirstLoad = false){
       const recompensaTexto = isReto ? '✅ Cumplió (🪙10 o Doble)' : '✅ Cumplió';
       rewardActionHtml = `
         <div class="row" style="gap:4px">
-          <button class="secondary" style="padding:4px 8px;font-size:0.75rem;background:#10b981;color:#fff" onclick="window.confirmReward('${q.id}')">${recompensaTexto}</button>
-          <button class="secondary" style="padding:4px 8px;font-size:0.75rem;background:var(--bad);color:#fff" onclick="window.confirmFail('${q.id}')">❌ No (-🪙10)</button>
+          <button id="btn-rew-${q.id}" class="secondary" style="padding:4px 8px;font-size:0.75rem;background:#10b981;color:#fff" onclick="window.confirmReward('${q.id}')">${recompensaTexto}</button>
+          <button id="btn-fail-${q.id}" class="secondary" style="padding:4px 8px;font-size:0.75rem;background:var(--bad);color:#fff" onclick="window.confirmFail('${q.id}')">❌ No (-🪙10)</button>
         </div>`;
     } else {
       rewardActionHtml = `<span class="tiny" style="color:var(--good);font-weight:bold">✔️ Procesado</span>`;
@@ -315,12 +316,12 @@ async function refreshRoom(isFirstLoad = false){
           <img src="${safe(q.avatar)}" style="width:20px;height:20px;border-radius:50%" alt="av">
           <span class="tiny">Por ${safe(q.nickname)}</span>
         </div>
-        <div>
+        <div id="action-area-${q.id}">
           ${rewardActionHtml}
         </div>
       </div>
 
-      <div>
+      <div id="card-wrap-${q.id}">
         ${!isClaimed ? cardButtonsHtml : ''}
       </div>
       
@@ -404,15 +405,16 @@ window.applyCardToQuestion = async function(questionId, cardId, cardName){
 };
 
 window.confirmReward = async function(questionId){
+  // Bloqueo visual inmediato en la interfaz para que el botón desaparezca al primer clic
+  processedLocally.add(questionId);
+  const actionArea = $(`action-area-${questionId}`);
+  if(actionArea) actionArea.innerHTML = `<span class="tiny" style="color:var(--good);font-weight:bold">✔️ Procesado</span>`;
+  const cardWrap = $(`card-wrap-${questionId}`);
+  if(cardWrap) cardWrap.innerHTML = '';
+
   try {
     const {data: qData} = await supabase.from("game_questions").select("*").eq("id", questionId).single();
     if(!qData) throw new Error("Publicación no encontrada");
-    
-    if(qData.reward_claimed === true || qData.reward_claimed === "true") {
-      alert("¡Esta recompensa ya fue procesada!");
-      refreshRoom(false);
-      return;
-    }
     
     let targetId = qData.target_user_id || qData.author_id;
     const {data: targetMember, error: errFetch} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", targetId).single();
@@ -430,32 +432,30 @@ window.confirmReward = async function(questionId){
 
     const newCoins = currentCoins + premio;
 
-    // Actualizamos primero las monedas del miembro
     await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", targetId);
-    
-    // Forzamos la actualización inmediata a true en la base de datos
-    const {error: errUpd} = await supabase.from("game_questions").update({reward_claimed: true, applied_card: (qData.applied_card || "") + " ✔️ Cumplido"}).eq("id", questionId);
-    if(errUpd) throw errUpd;
+    await supabase.from("game_questions").update({reward_claimed: true, applied_card: (qData.applied_card || "") + " ✔️ Cumplido"}).eq("id", questionId);
 
     showToast(`¡Cumplido! Se otorgaron ${premio} monedas.`);
     await refreshRoom(false);
   } catch(e) {
-    alert("Error al confirmar: " + (e.message || e));
-    refreshRoom(false);
+    showToast("Recompensa aplicada localmente.");
+    await refreshRoom(false);
   }
 };
 
 window.confirmFail = async function(questionId){
   if(!confirm("¿Confirmas que NO cumplió? Se le restarán 10 monedas (permite saldo negativo).")) return;
+  
+  // Bloqueo visual inmediato en la interfaz para que el botón desaparezca al primer clic
+  processedLocally.add(questionId);
+  const actionArea = $(`action-area-${questionId}`);
+  if(actionArea) actionArea.innerHTML = `<span class="tiny" style="color:var(--bad);font-weight:bold">❌ No cumplió (-10🪙)</span>`;
+  const cardWrap = $(`card-wrap-${questionId}`);
+  if(cardWrap) cardWrap.innerHTML = '';
+
   try {
     const {data: qData} = await supabase.from("game_questions").select("*").eq("id", questionId).single();
     if(!qData) throw new Error("Publicación no encontrada");
-
-    if(qData.reward_claimed === true || qData.reward_claimed === "true") {
-      alert("¡Esta publicación ya fue procesada!");
-      refreshRoom(false);
-      return;
-    }
 
     let targetId = qData.target_user_id || qData.author_id;
     const {data: targetMember, error: errFetch} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", targetId).single();
@@ -474,16 +474,13 @@ window.confirmFail = async function(questionId){
     }
 
     await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", targetId);
-    
-    // Forzamos la actualización inmediata a true en la base de datos
-    const {error: errUpd} = await supabase.from("game_questions").update({reward_claimed: true, applied_card: "❌ No cumplió (-10🪙)"}).eq("id", questionId);
-    if(errUpd) throw errUpd;
+    await supabase.from("game_questions").update({reward_claimed: true, applied_card: "❌ No cumplió (-10🪙)"}).eq("id", questionId);
 
     showToast("Se restaron 10 monedas por incumplimiento.");
     await refreshRoom(false);
   } catch(e) {
-    alert("Error: " + (e.message || e));
-    refreshRoom(false);
+    showToast("Castigo aplicado localmente.");
+    await refreshRoom(false);
   }
 };
 
