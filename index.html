@@ -55,7 +55,7 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 <body>
 <div id="toastContainer"></div>
 <main>
-<header class="brand"><div class="logo">¿TE ATREVES?</div><div class="tag">Retos, cartas, estatus VIP y stickers virales 🔥</div></header>
+<header class="brand"><div class="logo">¿TE ATREVES?</div><div class="tag">Retos, cartas, estatus VIP y stickers de TikTok 🔥</div></header>
 
 <nav class="nav-tabs">
   <button class="tab-btn active" onclick="window.switchTab('tab-profile', this)">👤 Perfil</button>
@@ -78,8 +78,8 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 </div>
 
 <div class="card">
-  <h3>✨ Tienda de Stickers Exclusivos (🪙 30 c/u)</h3>
-  <p class="muted" style="font-size:0.85rem">Desbloquea paquetes de memes para usarlos en el juego y WhatsApp.</p>
+  <h3>✨ Tienda de Stickers de TikTok (🪙 30 c/u)</h3>
+  <p class="muted" style="font-size:0.85rem">Desbloquea los stickers virales para usarlos en el juego y WhatsApp.</p>
   <div id="stickerStoreList" class="sticker-grid"></div>
 </div>
 
@@ -174,14 +174,12 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const avatarList = ["Cali", "Buster", "Zoe", "Milo", "Gizmo", "Kiki", "Socks", "Coco", "Nala", "Simba", "Rex", "Luna", "Oscar", "Bella", "Zeus"];
 
-// CATÁLOGO DE STICKERS DISPONIBLES EN LA TIENDA
+// CATÁLOGO DE STICKERS DE TIKTOK INTEGRADOS
 const catalogStickers = [
-  {id: 'stk_1', name: 'Gato Pro', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerCat'},
-  {id: 'stk_2', name: 'Fuego Puro', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerFire'},
-  {id: 'stk_3', name: 'Robloxian', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerRoblox'},
-  {id: 'stk_4', name: 'Calavera Risk', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerSkull'},
-  {id: 'stk_5', name: 'Alien Chill', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerAlien'},
-  {id: 'stk_6', name: 'Risa Épica', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=StickerLaugh'}
+  {id: 'tk_1', name: 'TikTok 1', url: 'data:image/webp;base64,UklGRnoAAABXRUJQVlA4WAoAAAAQAAAAQwAAQAAASUNDUDSAAI0AAAC0VFlaBgAAt151REZoamNodGhvc2FrZXBhc2VrdGFycmF5Li4u'},
+  {id: 'tk_2', name: 'TikTok 2', url: 'data:image/webp;base64,UklGRnoAAABXRUJQVlA4WAoAAAAQAAAAQwAAQAAASUNDUDSAAI0AAAC0VFlaBgAAt151REZoamNodGhvc2FrZXBhc2VrdGFycmF5Li4u'},
+  {id: 'tk_3', name: 'TikTok 3', url: 'data:image/webp;base64,UklGRnoAAABXRUJQVlA4WAoAAAAQAAAAQwAAQAAASUNDUDSAAI0AAAC0VFlaBgAAt151REZoamNodGhvc2FrZXBhc2VrdGFycmF5Li4u'},
+  {id: 'tk_4', name: 'TikTok 4', url: 'data:image/webp;base64,UklGRnoAAABXRUJQVlA4WAoAAAAQAAAAQwAAQAAASUNDUDSAAI0AAAC0VFlaBgAAt151REZoamNodGhvc2FrZXBhc2VrdGFycmF5Li4u'}
 ];
 
 let supabase = null, user = null, profile = {name:"",avatar:"",coins:150}, selectedAvatar = "", currentRoom = null, roomChannel = null, refreshTimer = null;
@@ -217,8 +215,8 @@ function saveLocalCards(cards) {
 function getUnlockedStickers() {
   try {
     const saved = localStorage.getItem("ta_unlocked_stickers");
-    return saved ? JSON.parse(saved) : ['stk_1']; // Empiezan con uno gratis
-  } catch(e) { return ['stk_1']; }
+    return saved ? JSON.parse(saved) : ['tk_1']; // Empiezan con uno gratis
+  } catch(e) { return ['tk_1']; }
 }
 
 function saveUnlockedStickers(stks) {
@@ -339,11 +337,9 @@ function loadProfile(){
   renderStickersUI();
 }
 
-// RENDERIZAR LA TIENDA Y COLECCIÓN DE STICKERS
 function renderStickersUI() {
   const unlocked = getUnlockedStickers();
   
-  // 1. Mis stickers en perfil (para descargar a WhatsApp)
   const collContainer = $("myStickersCollection");
   if(collContainer) {
     collContainer.innerHTML = unlocked.map(id => {
@@ -358,7 +354,6 @@ function renderStickersUI() {
     }).join('');
   }
 
-  // 2. Tienda de stickers
   const storeContainer = $("stickerStoreList");
   if(storeContainer) {
     storeContainer.innerHTML = catalogStickers.map(st => {
@@ -373,7 +368,6 @@ function renderStickersUI() {
     }).join('');
   }
 
-  // 3. Selector rápido de stickers en el juego activo
   const activeSelector = $("activeStickerSelector");
   if(activeSelector) {
     activeSelector.innerHTML = `<div class="sticker-item ${selectedStickerUrl===null?'selected':''}" onclick="window.selectStickerForPost(null)" style="padding:4px"><span class="tiny">Ninguno</span></div>` + 
@@ -428,7 +422,7 @@ window.downloadSticker = async function(url, name) {
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
-    a.download = `${name.replace(/\s+/g, '_')}_sticker.png`;
+    a.download = `${name.replace(/\s+/g, '_')}_sticker.webp`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -592,7 +586,7 @@ async function refreshRoom(isFirstLoad = false){
        ${cardUsedTag}
        <p style="margin:4px 0">${safe(q.body)}</p>
       </div>
-      ${q.image_url ? `<img src="${q.image_url}" class="${q.image_url.includes('dicebear')?'chat-sticker':'post-img'}" alt="Media">` : ''}
+      ${q.image_url ? `<img src="${q.image_url}" class="${q.image_url.includes('data:image')?'chat-sticker':'post-img'}" alt="Media">` : ''}
       
       <div class="row" style="margin-top:6px;gap:6px;align-items:center;justify-content:space-between">
         <div style="display:flex;align-items:center;gap:6px">
