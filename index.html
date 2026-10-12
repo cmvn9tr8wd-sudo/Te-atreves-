@@ -178,70 +178,6 @@ const catalogStickers = [
 let supabase = null, user = null, profile = {name:"",avatar:"",coins:50}, selectedAvatar = "";
 let activeRooms = {}; 
 
-const processedLocally = new Set(); 
-try {
-  const saved = localStorage.getItem("ta_processed_questions");
-  if(saved) { JSON.parse(saved).forEach(id => processedLocally.add(id)); }
-} catch(e) {}
-
-function saveProcessedLocal() {
-  try {
-    localStorage.setItem("ta_processed_questions", JSON.stringify(Array.from(processedLocally)));
-  } catch(e) {}
-}
-
-function getLocalCards() {
-  try {
-    const saved = localStorage.getItem("ta_my_cards");
-    return saved ? JSON.parse(saved) : [];
-  } catch(e) { return []; }
-}
-
-function saveLocalCards(cards) {
-  try {
-    localStorage.setItem("ta_my_cards", JSON.stringify(cards));
-  } catch(e) {}
-}
-
-function getUnlockedStickers() {
-  try {
-    const saved = localStorage.getItem("ta_unlocked_stickers");
-    return saved ? JSON.parse(saved) : ['stk_1'];
-  } catch(e) { return ['stk_1']; }
-}
-
-function saveUnlockedStickers(stks) {
-  try {
-    localStorage.setItem("ta_unlocked_stickers", JSON.stringify(stks));
-  } catch(e) {}
-}
-
-function getVipStatus() {
-  try { return localStorage.getItem("ta_vip_active") === "true"; } catch(e) { return false; }
-}
-
-function getVipTitle() {
-  try { return localStorage.getItem("ta_vip_title") || "👑 VIP ⚡"; } catch(e) { return "👑 VIP ⚡"; }
-}
-
-function playVipSound() {
-  try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if(audioCtx.state === 'suspended') { audioCtx.resume(); }
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.3);
-  } catch(e) {}
-}
-
 function playSuccessSound() {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -375,14 +311,14 @@ $("customAvatarFile").onchange = (e) => {
 };
 
 function renderStickersUI() {
-  const unlocked = getUnlockedStickers();
+  const unlocked = JSON.parse(localStorage.getItem("ta_unlocked_stickers") || '["stk_1"]');
   const collContainer = $("myStickersCollection");
   if(collContainer) {
     collContainer.innerHTML = unlocked.map(id => {
       const st = catalogStickers.find(s => s.id === id);
       if(!st) return '';
       return `
-        <div class="sticker-item" onclick="window.downloadSticker('${st.url}', 'sticker_${st.id}')" title="Toca para descargar a WhatsApp">
+        <div class="sticker-item" onclick="window.downloadSticker('${st.url}', 'sticker_${st.id}')">
           <img src="${st.url}" alt="sticker">
           <div class="tiny" style="color:var(--cyan);margin-top:4px">📥 Descargar</div>
         </div>
@@ -406,27 +342,19 @@ function renderStickersUI() {
 
 window.buySticker = async function(stickerId) {
   if(profile.coins < 30) { playFailSound(); alert("No tienes suficientes monedas (necesitas 🪙 30)."); return; }
-  const unlocked = getUnlockedStickers();
+  const unlocked = JSON.parse(localStorage.getItem("ta_unlocked_stickers") || '["stk_1"]');
   if(unlocked.includes(stickerId)) return;
-
-  try {
-    profile.coins -= 30;
-    $("userCoins").textContent = "🪙 " + profile.coins;
-    unlocked.push(stickerId);
-    saveUnlockedStickers(unlocked);
-    playSuccessSound();
-    showToast("¡Sticker desbloqueado con éxito!");
-    renderStickersUI();
-  } catch(e) {
-    playFailSound();
-    alert("Error al comprar sticker: " + e.message);
-  }
+  profile.coins -= 30;
+  $("userCoins").textContent = "🪙 " + profile.coins;
+  unlocked.push(stickerId);
+  localStorage.setItem("ta_unlocked_stickers", JSON.stringify(unlocked));
+  playSuccessSound();
+  showToast("¡Sticker desbloqueado!");
+  renderStickersUI();
 };
 
 window.downloadSticker = async function(url, name) {
   try {
-    playSuccessSound();
-    showToast("Preparando sticker para WhatsApp...");
     const response = await fetch(url);
     const blob = await response.blob();
     const blobUrl = URL.createObjectURL(blob);
@@ -437,10 +365,7 @@ window.downloadSticker = async function(url, name) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(blobUrl);
-    showToast("¡Sticker descargado!");
-  } catch(e) {
-    window.open(url, '_blank');
-  }
+  } catch(e) { window.open(url, '_blank'); }
 };
 
 async function initAutoConnect(){
@@ -456,7 +381,7 @@ async function initAutoConnect(){
 
 function saveProfile(){
  const n=$("nickname").value.trim();
- if(n.length < 2){ playFailSound(); status("homeMsg","Elige un apodo de al menos 2 caracteres.","error"); alert("Por favor escribe un apodo de al menos 2 caracteres."); return false; }
+ if(n.length < 2){ playFailSound(); status("homeMsg","Elige un apodo de al menos 2 caracteres.","error"); alert("Escribe un apodo válido."); return false; }
  profile.name = n.slice(0,20);
  profile.avatar = getAvatarUrl(selectedAvatar);
  localStorage.setItem("ta_name", profile.name);
@@ -473,21 +398,20 @@ async function createRoom(){
  try{
   const roomName = $("newRoomName").value.trim() || "Mi grupo";
   const data = await rpc("create_game_room",{p_room_name: roomName, p_nickname: profile.name, p_avatar: profile.avatar});
-  if(!data || !data.room_id) throw new Error("No se pudo obtener el ID de la sala");
   playSuccessSound();
   await openRoom(data.room_id, data.room_code, data.room_name);
- }catch(e){ playFailSound(); status("homeMsg","Error al crear sala: "+e.message,"error"); alert("Error al crear sala: "+e.message); }
+ }catch(e){ playFailSound(); alert("Error al crear sala: "+e.message); }
 }
 
 async function joinRoom(){
  if(!saveProfile()) return;
  const code=cleanCode($("joinCode").value);
- if(code.length<5){ playFailSound(); status("homeMsg","Escribe un código válido.","error"); alert("Escribe un código de sala válido."); return; }
+ if(code.length<5){ playFailSound(); alert("Escribe un código de sala válido."); return; }
  try{
   const data=await rpc("join_game_room",{p_room_code:code,p_nickname:profile.name,p_avatar:profile.avatar});
   playSuccessSound();
   await openRoom(data.room_id,data.room_code,data.room_name);
- }catch(e){ playFailSound(); status("homeMsg","Error al entrar: "+e.message,"error"); alert("Error al entrar a la sala: "+e.message); }
+ }catch(e){ playFailSound(); alert("Error al entrar: "+e.message); }
 }
 
 async function openRoom(id,code,name){
@@ -497,8 +421,7 @@ async function openRoom(id,code,name){
  }
 
  const tabId = 'tab-room-' + id;
- const btnId = 'btn-tab-room-' + id;
-
+ const btnId = 'btn-tab-room-${id}`;
  const navContainer = $("navTabsContainer");
  const newBtn = document.createElement("button");
  newBtn.id = btnId;
@@ -519,24 +442,8 @@ async function openRoom(id,code,name){
      </div>
      <div class="status" style="font-size:0.8rem;word-break:break-all">Invitación: ${location.origin}${location.pathname}?sala=${safe(code)}</div>
 
-     <div class="grid" style="margin-top:14px">
-       <div class="card" style="background:#15102d;margin:0">
-         <h3>🛡️ Tus Cartas de Salvación</h3>
-         <p class="muted" style="font-size:0.85rem">Compra cartas (🪙 40): Comodín, Bloqueo o Recompensa Doble.</p>
-         <div id="myCardsList-${id}"><p class="muted">No tienes cartas activas.</p></div>
-         <button class="secondary" style="margin-top:8px;width:100%" onclick="window.buyCard()">Comprar Carta (🪙 40)</button>
-       </div>
-
-       <div class="card" style="background:#15102d;margin:0">
-         <h3>👑 Tienda de Estatus VIP & Neón</h3>
-         <p class="muted" style="font-size:0.85rem">Desbloquea neón, emojis animados y sonido especial (🪙 100).</p>
-         <div id="myVipStatus-${id}"><p class="muted">Sin rango VIP activo.</p></div>
-         <button class="secondary" style="margin-top:8px;width:100%;background:linear-gradient(100deg,#f59e0b,#ef4444);color:#fff" onclick="window.buyVip()">Desbloquear Rango VIP (🪙 100)</button>
-       </div>
-     </div>
-
      <h3 style="margin-top:20px">👥 Jugadores conectados</h3>
-     <p class="muted" style="font-size:0.85rem">Toca uno para seleccionarlo y retarlo con un Mini Juego en tiempo real (Apuesta: 🪙 10)</p>
+     <p class="muted" style="font-size:0.85rem">Toca uno para seleccionarlo y retarlo con un Mini Juego interactivo (Apuesta: 🪙 10)</p>
      <div id="players-${id}"></div>
      
      <div id="minigameTriggerBox-${id}" class="card hidden" style="background:#22153b;border-color:var(--cyan);margin-top:14px">
@@ -548,7 +455,6 @@ async function openRoom(id,code,name){
        </div>
        <div class="row" style="margin-top:8px">
          <button class="secondary" style="background:#fde047;color:#180d2a;flex:1" onclick="window.sendChallenge('${id}', 'trivia')">❓ Trivia Flash</button>
-         <button class="secondary" style="background:#ff4fb8;color:#fff;flex:1" onclick="window.sendChallenge('${id}', 'ruleta')">🎰 Ruleta Rusa de Retos</button>
        </div>
      </div>
 
@@ -564,18 +470,27 @@ async function openRoom(id,code,name){
    .on("postgres_changes",{event:"INSERT",schema:"public",table:"game_challenges",filter:"room_id=eq."+id}, payload => {
       const challenge = payload.new;
       if(challenge.target_id === user.id && challenge.status === 'pending') {
-        playVipSound();
+        playSuccessSound();
         showIncomingChallenge(id, challenge);
+      }
+   })
+   .on("postgres_changes",{event:"UPDATE",schema:"public",table:"game_challenges",filter:"room_id=eq."+id}, payload => {
+      const challenge = payload.new;
+      // Si el retador detecta que fue aceptado, arranca el juego para él también
+      if(challenge.sender_id === user.id && challenge.status === 'accepted') {
+        startInteractiveMinigame(id, challenge.game_type, challenge.id, challenge.sender_name, challenge.target_name);
+      }
+      if((challenge.sender_id === user.id || challenge.target_id === user.id) && challenge.status === 'finished') {
+        $("minigameContainer").innerHTML = '';
+        showToast(challenge.result_text || "¡Duelo finalizado!");
+        refreshRoom(id, false);
       }
    })
    .subscribe();
 
  const timer = setInterval(() => refreshRoom(id, false), 12000);
 
- activeRooms[id] = {
-   id, code, name, channel, timer, lastCount: 0, targetUser: null
- };
-
+ activeRooms[id] = { id, code, name, channel, timer, lastCount: 0, targetUser: null };
  window.switchTab(tabId, newBtn);
  await refreshRoom(id, true);
 }
@@ -588,7 +503,7 @@ window.selectTarget = function(roomId, userId, nickname){
   const targetNameDisp = $(`selectedTargetName-${roomId}`);
   if(targetNameDisp) targetNameDisp.textContent = nickname;
   if(triggerBox) triggerBox.classList.remove("hidden");
-  showToast(`Has seleccionado a ${nickname} para un duelo.`);
+  showToast(`Has seleccionado a ${nickname}.`);
 };
 
 window.closeRoomTab = async function(id) {
@@ -597,22 +512,16 @@ window.closeRoomTab = async function(id) {
   if(r.channel) await supabase.removeChannel(r.channel);
   if(r.timer) clearInterval(r.timer);
   delete activeRooms[id];
-
-  const tabEl = $(`tab-room-${id}`);
-  const btnEl = $(`btn-tab-room-${id}`);
-  if(tabEl) tabEl.remove();
-  if(btnEl) btnEl.remove();
-
+  $(`tab-room-${id}`)?.remove();
+  $(`btn-tab-room-${id}`)?.remove();
   window.switchTab('tab-rooms', document.querySelectorAll('.tab-btn')[1]);
 };
 
 window.copyRoomInvite = async function(code) {
-  const url = location.origin + location.pathname + "?sala=" + code;
-  try { await navigator.clipboard.writeText(url); playSuccessSound(); showToast("Enlace de invitación copiado."); }
-  catch(e) { playFailSound(); showToast("Código: " + code); }
+  try { await navigator.clipboard.writeText(location.origin + location.pathname + "?sala=" + code); showToast("Enlace copiado."); }
+  catch(e) { showToast("Código: " + code); }
 };
 
-// ENVIAR RETO EN TIEMPO REAL
 window.sendChallenge = async function(roomId, gameType) {
   const rObj = activeRooms[roomId];
   if(!rObj || !rObj.targetUser) { alert("Selecciona a un jugador primero."); return; }
@@ -620,7 +529,7 @@ window.sendChallenge = async function(roomId, gameType) {
   try {
     const {data: myMem} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
     const myCoins = myMem ? (myMem.coins || 50) : 50;
-    if(myCoins < 10) { playFailSound(); alert("No tienes suficientes monedas para la apuesta (necesitas 🪙 10)."); return; }
+    if(myCoins < 10) { playFailSound(); alert("No tienes suficientes monedas (necesitas 🪙 10)."); return; }
 
     await supabase.from("game_members").update({coins: myCoins - 10}).eq("room_id", roomId).eq("user_id", user.id);
     profile.coins = myCoins - 10;
@@ -636,23 +545,18 @@ window.sendChallenge = async function(roomId, gameType) {
     });
 
     playSuccessSound();
-    showToast(`Invitación enviada a ${rObj.targetUser.name}. Esperando respuesta...`);
-  } catch(e) {
-    alert("Error al enviar el reto: " + e.message);
-  }
+    showToast(`Reto enviado a ${rObj.targetUser.name}. Esperando respuesta...`);
+  } catch(e) { alert("Error: " + e.message); }
 };
 
-// MOSTRAR RETO EN LA PANTALLA DEL JUGADOR RETADO
 function showIncomingChallenge(roomId, challenge) {
-  const overlayContainer = $("minigameContainer");
-  overlayContainer.innerHTML = `
+  $("minigameContainer").innerHTML = `
     <div class="minigame-overlay">
       <div class="minigame-box">
         <h2 style="color:var(--pink)">⚡ ¡TE HAN RETADO!</h2>
-        <p style="font-size:1.05rem;margin:12px 0"><strong>${safe(challenge.sender_name)}</strong> te ha retado a un duelo en tiempo real.</p>
-        <p class="muted">Apuesta: 🪙 10 monedas. ¡El ganador se lleva el pozo!</p>
+        <p style="margin:12px 0"><strong>${safe(challenge.sender_name)}</strong> te reta a un duelo (Apuesta: 🪙 10).</p>
         <div class="row" style="margin-top:20px;gap:10px">
-          <button class="secondary" style="background:#10b981;color:#fff;flex:1" onclick="window.acceptChallenge('${roomId}', '${challenge.id}', '${challenge.game_type}', '${safe(challenge.sender_name)}')">¡Aceptar Duelo! 🔥</button>
+          <button class="secondary" style="background:#10b981;color:#fff;flex:1" onclick="window.acceptChallenge('${roomId}', '${challenge.id}', '${challenge.game_type}', '${safe(challenge.sender_name)}')">¡Aceptar! 🔥</button>
           <button class="secondary" style="background:var(--bad);color:#fff;flex:1" onclick="window.rejectChallenge('${challenge.id}')">Rechazar</button>
         </div>
       </div>
@@ -662,9 +566,7 @@ function showIncomingChallenge(roomId, challenge) {
 
 window.rejectChallenge = async function(challengeId) {
   $("minigameContainer").innerHTML = '';
-  try {
-    await supabase.from("game_challenges").update({status: 'declined'}).eq("id", challengeId);
-  } catch(e) {}
+  await supabase.from("game_challenges").update({status: 'declined'}).eq("id", challengeId);
   showToast("Reto rechazado.");
 };
 
@@ -672,24 +574,20 @@ window.acceptChallenge = async function(roomId, challengeId, gameType, senderNam
   try {
     const {data: myMem} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
     const myCoins = myMem ? (myMem.coins || 50) : 50;
-    if(myCoins < 10) { playFailSound(); alert("No tienes suficientes monedas para aceptar la apuesta (10🪙)."); return; }
+    if(myCoins < 10) { playFailSound(); alert("No tienes suficientes monedas (10🪙)."); return; }
 
     await supabase.from("game_members").update({coins: myCoins - 10}).eq("room_id", roomId).eq("user_id", user.id);
     profile.coins = myCoins - 10;
     $("userCoins").textContent = "🪙 " + profile.coins;
 
     await supabase.from("game_challenges").update({status: 'accepted'}).eq("id", challengeId);
-    
-    // Iniciar mini juego interactivo
-    startInteractiveMinigame(roomId, gameType, senderName);
-  } catch(e) {
-    alert("Error al aceptar: " + e.message);
-  }
+    startInteractiveMinigame(roomId, gameType, challengeId, senderName, profile.name);
+  } catch(e) { alert("Error: " + e.message); }
 };
 
-function startInteractiveMinigame(roomId, gameType, rivalName) {
-  const overlayContainer = $("minigameContainer");
-  overlayContainer.innerHTML = '';
+function startInteractiveMinigame(roomId, gameType, challengeId, senderName, targetName) {
+  const container = $("minigameContainer");
+  container.innerHTML = '';
   const modal = document.createElement("div");
   modal.className = "minigame-overlay";
 
@@ -698,108 +596,147 @@ function startInteractiveMinigame(roomId, gameType, rivalName) {
     modal.innerHTML = `
       <div class="minigame-box">
         <h2 style="color:var(--cyan)">⚡ DUELO DE VELOCIDAD</h2>
-        <p class="muted">Contra: ${rivalName}. ¡Toca lo más rápido en 5s!</p>
+        <p class="muted">¡Toca el botón lo más rápido en 5 segundos!</p>
         <div style="font-size:2.5rem;font-weight:900;color:var(--gold);margin:16px 0" id="clickCount">0</div>
         <button id="tapBtn" style="width:100%;padding:20px;font-size:1.4rem;background:linear-gradient(135deg,#10b981,#065f46);color:#fff">¡TOCA RÁPIDO! 🔥</button>
         <div id="gameTimer" class="tiny muted" style="margin-top:12px">Tiempo restante: 5s</div>
       </div>
     `;
-    overlayContainer.appendChild(modal);
+    container.appendChild(modal);
     playSuccessSound();
 
     let timeLeft = 5;
-    const timerInterval = setInterval(() => {
+    const timerInterval = setInterval(async () => {
       timeLeft--;
       if($("gameTimer")) $("gameTimer").textContent = `Tiempo restante: ${timeLeft}s`;
       if(timeLeft <= 0) {
         clearInterval(timerInterval);
-        finishMinigame(roomId, `🏆 ¡${profile.name} completó el Duelo de Velocidad contra ${rivalName} con ${clicks} clics! (+🪙20 Pozo)`);
+        // Guardar resultado del clicker en el reto
+        const winnerText = `🏆 ¡Duelo de Velocidad ganado por ${profile.name} con ${clicks} clics! (+🪙20 Pozo)`;
+        await supabase.from("game_challenges").update({status: 'finished', result_text: winnerText}).eq("id", challengeId);
+        finishGameAndReward(roomId, winnerText);
       }
     }, 1000);
 
-    $("tapBtn").onclick = () => {
-      clicks++;
-      if($("clickCount")) $("clickCount").textContent = clicks;
-      if(navigator.vibrate) navigator.vibrate(40);
-    };
-  } else {
-    // Para RPS o Trivia se resuelve de manera dinámica rápida
-    finishMinigame(roomId, `🏆 ¡Duelo finalizado entre ${profile.name} y ${rivalName}! (+🪙20 Pozo compartido)`);
+    $("tapBtn").onclick = () => { clicks++; if($("clickCount")) $("clickCount").textContent = clicks; };
+  } 
+  else if(gameType === 'rps') {
+    modal.innerHTML = `
+      <div class="minigame-box">
+        <h2 style="color:var(--purple)">✊ PIEDRA, PAPEL O TIJERA</h2>
+        <p class="muted">Elige tu arma:</p>
+        <div class="row" style="justify-content:center;margin-top:20px;gap:12px">
+          <button class="secondary" style="padding:16px;font-size:1.5rem" onclick="window.resolveRPS('${roomId}', '${challengeId}', 'Piedra')">✊</button>
+          <button class="secondary" style="padding:16px;font-size:1.5rem" onclick="window.resolveRPS('${roomId}', '${challengeId}', 'Papel')">📄</button>
+          <button class="secondary" style="padding:16px;font-size:1.5rem" onclick="window.resolveRPS('${roomId}', '${challengeId}', 'Tijera')">✂️</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(modal);
+    playSuccessSound();
+  }
+  else if(gameType === 'trivia') {
+    modal.innerHTML = `
+      <div class="minigame-box">
+        <h2 style="color:var(--gold)">❓ TRIVIA FLASH</h2>
+        <p style="font-weight:bold;margin:12px 0">¿Cuál es el lenguaje para dar estilo a las páginas web?</p>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+          <button class="secondary" onclick="window.resolveTrivia('${roomId}', '${challengeId}', false)">Python</button>
+          <button class="secondary" onclick="window.resolveTrivia('${roomId}', '${challengeId}', true)">CSS (Hojas de Estilo)</button>
+          <button class="secondary" onclick="window.resolveTrivia('${roomId}', '${challengeId}', false)">SQL</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(modal);
+    playSuccessSound();
   }
 }
 
-async function finishMinigame(roomId, announcement) {
+window.resolveRPS = async function(roomId, challengeId, myChoice) {
+  const options = ['Piedra', 'Papel', 'Tijera'];
+  const rivalChoice = options[Math.floor(Math.random() * options.length)];
+  let resText = '';
+  if(myChoice === rivalChoice) {
+    resText = `🤝 Empate en Piedra, Papel o Tijera (${myChoice} vs ${rivalChoice}). Se devuelven las monedas.`;
+    const {data: m} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
+    await supabase.from("game_members").update({coins: (m.coins || 50) + 10}).eq("room_id", roomId).eq("user_id", user.id);
+    profile.coins += 10;
+    $("userCoins").textContent = "🪙 " + profile.coins;
+  } else if(
+    (myChoice === 'Piedra' && rivalChoice === 'Tijera') ||
+    (myChoice === 'Papel' && rivalChoice === 'Piedra') ||
+    (myChoice === 'Tijera' && rivalChoice === 'Papel')
+  ) {
+    resText = `🏆 ¡${profile.name} ganó el Piedra, Papel o Tijera (${myChoice} contra ${rivalChoice})! (+🪙20 Pozo)`;
+  } else {
+    resText = `❌ Perdiste el Piedra, Papel o Tijera contra la opción del rival (${rivalChoice}).`;
+  }
+  await supabase.from("game_challenges").update({status: 'finished', result_text: resText}).eq("id", challengeId);
+  finishGameAndReward(roomId, resText);
+};
+
+window.resolveTrivia = async function(roomId, challengeId, isCorrect) {
+  let resText = '';
+  if(isCorrect) {
+    resText = `🏆 ¡${profile.name} respondió correctamente la Trivia Flash! (+🪙20 Pozo)`;
+  } else {
+    playFailSound();
+    resText = `❌ Respuesta incorrecta en la Trivia Flash. Perdiste tu apuesta.`;
+  }
+  await supabase.from("game_challenges").update({status: 'finished', result_text: resText}).eq("id", challengeId);
+  finishGameAndReward(roomId, resText);
+};
+
+async function finishGameAndReward(roomId, announcement) {
   $("minigameContainer").innerHTML = '';
   playSuccessSound();
 
-  try {
+  if(announcement.includes("ganó") || announcement.includes("correctamente")) {
     const {data: m} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
     const newCoins = (m ? m.coins : profile.coins) + 20;
     await supabase.from("game_members").update({coins: newCoins}).eq("room_id", roomId).eq("user_id", user.id);
     profile.coins = newCoins;
     $("userCoins").textContent = "🪙 " + profile.coins;
+  }
 
-    let authorName = profile.name;
-    if(getVipStatus()) { authorName = getVipTitle() + " " + profile.name + " [VIP]"; }
+  await supabase.from("game_questions").insert({
+    room_id: roomId, author_id: user.id, nickname: profile.name, avatar: profile.avatar,
+    kind: 'reto', body: announcement, reward_claimed: true, applied_card: '⚡ Mini Juego'
+  });
 
-    await supabase.from("game_questions").insert({
-      room_id: roomId,
-      author_id: user.id,
-      nickname: authorName,
-      avatar: profile.avatar,
-      kind: 'reto',
-      body: announcement,
-      reward_claimed: true,
-      applied_card: '⚡ Duelo en Tiempo Real'
-    });
-  } catch(e) {}
-
-  showToast("¡Duelo finalizado con éxito!");
+  showToast("¡Duelo finalizado!");
   refreshRoom(roomId, false);
 }
 
-async function refreshRoom(id, isFirstLoad = false){
- if(!activeRooms[id])return;
+async function refreshRoom(id){
  const rObj = activeRooms[id];
- try{
-  const [membersRes, questionsRes]=await Promise.all([
-   supabase.from("game_members").select("nickname,avatar,coins,user_id").eq("room_id",id).order("created_at"),
-   supabase.from("game_questions").select("*").eq("room_id",id).order("created_at",{ascending:false}).limit(100)
-  ]);
-  
-  const members = membersRes.data || [];
-  const questions = questionsRes.data || [];
-
-  const me = members.find(m => m.user_id === user.id);
-  if(me) { 
-    profile.coins = me.coins !== undefined ? me.coins : 50; 
-    $("userCoins").textContent = "🪙 " + profile.coins; 
-  }
-
-  const playersContainer = $(`players-${id}`);
-  if(playersContainer) {
-    playersContainer.innerHTML = members.length ? members.map(m => `
-      <span class="player" onclick="window.selectTarget('${id}', '${m.user_id}', '${safe(m.nickname)}')"><img src="${safe(m.avatar)}" alt="avatar"> ${safe(m.nickname)} ${m.user_id===user.id?'(Tú)':''}<span class="tiny" style="color:var(--cyan);margin-left:4px">⚡ Retar</span></span>
-    `).join("") : '<span class="muted">Sin jugadores.</span>';
-  }
-  
-  const questionsContainer = $(`questions-${id}`);
-  if(questionsContainer) {
-    questionsContainer.innerHTML = questions.length ? questions.map(q => `
-       <article class="question">
-        <div class="row" style="justify-content:space-between">
-         <span class="pill">⚡ Duelo / Reto</span>
-         <span class="tiny">${new Date(q.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
-        </div>
-        <p style="margin:8px 0">${safe(q.body)}</p>
-        <div class="row" style="gap:6px;align-items:center">
-          <img src="${safe(q.avatar)}" style="width:20px;height:20px;border-radius:50%" alt="av">
-          <span class="tiny">Por ${safe(q.nickname)}</span>
-        </div>
-       </article>
-    `).join("") : '<p class="muted">No hay publicaciones todavía.</p>';
-  }
- }catch(e){}
+ if(!rObj) return;
+ const [membersRes, questionsRes]=await Promise.all([
+  supabase.from("game_members").select("nickname,avatar,coins,user_id").eq("room_id",id).order("created_at"),
+  supabase.from("game_questions").select("*").eq("room_id",id).order("created_at",{ascending:false}).limit(50)
+ ]);
+ const members = membersRes.data || [];
+ const questions = questionsRes.data || [];
+ const me = members.find(m => m.user_id === user.id);
+ if(me) { profile.coins = me.coins !== undefined ? me.coins : 50; $("userCoins").textContent = "🪙 " + profile.coins; }
+ 
+ const playersContainer = $(`players-${id}`);
+ if(playersContainer) {
+   playersContainer.innerHTML = members.length ? members.map(m => `
+     <span class="player" onclick="window.selectTarget('${id}', '${m.user_id}', '${safe(m.nickname)}')"><img src="${safe(m.avatar)}" alt="avatar"> ${safe(m.nickname)} ${m.user_id===user.id?'(Tú)':''}<span class="tiny" style="color:var(--cyan);margin-left:4px">⚡ Retar</span></span>
+   `).join("") : '<span class="muted">Sin jugadores.</span>';
+ }
+ 
+ const questionsContainer = $(`questions-${id}`);
+ if(questionsContainer) {
+   questionsContainer.innerHTML = questions.length ? questions.map(q => `
+      <article class="question">
+       <div class="row" style="justify-content:space-between"><span class="pill">⚡ Duelo</span><span class="tiny">${new Date(q.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span></div>
+       <p style="margin:8px 0">${safe(q.body)}</p>
+       <div class="row" style="gap:6px;align-items:center"><img src="${safe(q.avatar)}" style="width:20px;height:20px;border-radius:50%" alt="av"><span class="tiny">Por ${safe(q.nickname)}</span></div>
+      </article>
+   `).join("") : '<p class="muted">No hay publicaciones todavía.</p>';
+ }
 }
 
 $("saveProfile").onclick = saveProfile;
