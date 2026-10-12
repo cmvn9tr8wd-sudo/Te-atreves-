@@ -420,9 +420,10 @@ async function openRoom(id,code,name){
    return;
  }
 
- const tabId = 'tab-room-' + id;
- const btnId = 'btn-tab-room-${id}`;
+  const tabId = 'tab-room-' + id;
+ const btnId = 'btn-tab-room-' + id;
  const navContainer = $("navTabsContainer");
+
  const newBtn = document.createElement("button");
  newBtn.id = btnId;
  newBtn.className = "tab-btn";
