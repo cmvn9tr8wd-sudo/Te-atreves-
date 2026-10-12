@@ -55,7 +55,7 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 <body>
 <div id="toastContainer"></div>
 <main>
-<header class="brand"><div class="logo">¿TE ATREVES?</div><div class="tag">Retos, cartas, estatus VIP y tus stickers virales 🔥</div></header>
+<header class="brand"><div class="logo">¿TE ATREVES?</div><div class="tag">Retos, cartas, estatus VIP y tus stickers 🔥</div></header>
 
 <nav class="nav-tabs">
   <button class="tab-btn active" onclick="window.switchTab('tab-profile', this)">👤 Perfil</button>
@@ -78,7 +78,7 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 </div>
 
 <div class="card">
-  <h3>✨ Tienda de Memes Absurdos (🪙 30 c/u)</h3>
+  <h3>✨ Tienda de Memes (🪙 30 c/u)</h3>
   <p class="muted" style="font-size:0.85rem">Desbloquea los stickers para usarlos en el juego y WhatsApp.</p>
   <div id="stickerStoreList" class="sticker-grid"></div>
 </div>
@@ -137,9 +137,7 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
   <option value="">✨ Escribir mi propio texto (Libre)...</option>
   <option value="¿Cuál ha sido el momento más vergonzoso de tu vida?">¿Cuál ha sido el momento más vergonzoso de tu vida?</option>
   <option value="Muestra la última foto guardada en tu galería">Muestra la última foto guardada en tu galería</option>
-  <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">Si tuvieras que casarte con alguien de este grupo, ¿quién sería?</option>
-  <option value="Imita el comportamiento de un animal durante 30 segundos">Imita el comportamiento de un animal durante 30 segundos</option>
-  <option value="Confiesa cuál fue tu última mentira piadosa">Confiesa cuál fue tu última mentira piadosa</option>
+  <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">Si tuvieras que casarte con alguien de este grupo, quién sería?</option>
 </select>
 
 <label>Tu texto personalizado</label>
@@ -174,27 +172,27 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const avatarList = ["Cali", "Buster", "Zoe", "Milo", "Gizmo", "Kiki", "Socks", "Coco", "Nala", "Simba", "Rex", "Luna", "Oscar", "Bella", "Zeus"];
 
-// CATÁLOGO DE TUS STICKERS SUBIDOS A GITHUB
+// CATÁLOGO CON ENLACES PÚBLICOS DIRECTOS
 const catalogStickers = [
-  {id: 'stk_1', name: 'Mal rollo', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/mal_rollo.png'},
-  {id: 'stk_2', name: 'Buenas vibraciones', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/buenas_vibraciones.png'},
-  {id: 'stk_3', name: 'Excel-en-te', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/excelente.png'},
-  {id: 'stk_4', name: 'Amor ciego', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/amor_ciego.png'},
-  {id: 'stk_5', name: 'Peliculón', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/peliculon.png'},
-  {id: 'stk_6', name: 'Culazo', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/culazo.png'},
-  {id: 'stk_7', name: 'Mala leche', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/mala_leche.png'},
-  {id: 'stk_8', name: 'Sobreactuado', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/sobreactuado.png'},
-  {id: 'stk_9', name: 'Me suda', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/mesuda.png'},
-  {id: 'stk_10', name: 'Pan comido', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/pan_comido.png'},
-  {id: 'stk_11', name: 'Se te ha caído', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/se_te_ha_caido.png'},
-  {id: 'stk_12', name: 'Tiempo muerto', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/tiempo_muerto.png'},
-  {id: 'stk_13', name: 'Culo del mundo', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/culo_mundo.png'},
-  {id: 'stk_14', name: 'Nos come la mierda', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/nos_come.png'},
-  {id: 'stk_15', name: 'Mente sucia', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/mente_sucia.png'},
-  {id: 'stk_16', name: 'Cagada monumental', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/cagada_monumental.png'},
-  {id: 'stk_17', name: 'Jaque mate', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/Jaquemate'},
-  {id: 'stk_18', name: 'Mosca cojonera', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/mosca_cojonera.png'},
-  {id: 'stk_19', name: 'Por culo', url: 'https://raw.githubusercontent.com/cmvn9tr8wd-sudo/Te-atreves-/main/stickers/por_culo.png'}
+  {id: 'stk_1', name: 'Mal rollo', url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=150'},
+  {id: 'stk_2', name: 'Buenas vibraciones', url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=150'},
+  {id: 'stk_3', name: 'Excel-en-te', url: 'https://images.unsplash.com/photo-1546554137-f86b9593a222?w=150'},
+  {id: 'stk_4', name: 'Amor ciego', url: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=150'},
+  {id: 'stk_5', name: 'Peliculón', url: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=150'},
+  {id: 'stk_6', name: 'Culazo', url: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=150'},
+  {id: 'stk_7', name: 'Mala leche', url: 'https://images.unsplash.com/photo-1556742049-0a67d553c2a5?w=150'},
+  {id: 'stk_8', name: 'Sobreactuado', url: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150'},
+  {id: 'stk_9', name: 'Me suda', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=150'},
+  {id: 'stk_10', name: 'Pan comido', url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150'},
+  {id: 'stk_11', name: 'Se te ha caído', url: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?w=150'},
+  {id: 'stk_12', name: 'Tiempo muerto', url: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=150'},
+  {id: 'stk_13', name: 'Culo del mundo', url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=150'},
+  {id: 'stk_14', name: 'Nos come', url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=150'},
+  {id: 'stk_15', name: 'Mente sucia', url: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=150'},
+  {id: 'stk_16', name: 'Cagada monumental', url: 'https://images.unsplash.com/photo-1499557354526-9e469c24b6ea?w=150'},
+  {id: 'stk_17', name: 'Jaque mate', url: 'https://images.unsplash.com/photo-1529699211952-734e80c4d42b?w=150'},
+  {id: 'stk_18', name: 'Mosca cojonera', url: 'https://images.unsplash.com/photo-1534567153574-2b12153a87f0?w=150'},
+  {id: 'stk_19', name: 'Por culo', url: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=150'}
 ];
 
 let supabase = null, user = null, profile = {name:"",avatar:"",coins:150}, selectedAvatar = "", currentRoom = null, roomChannel = null, refreshTimer = null;
@@ -230,7 +228,7 @@ function saveLocalCards(cards) {
 function getUnlockedStickers() {
   try {
     const saved = localStorage.getItem("ta_unlocked_stickers");
-    return saved ? JSON.parse(saved) : ['stk_1']; // Empiezan con uno gratis
+    return saved ? JSON.parse(saved) : ['stk_1'];
   } catch(e) { return ['stk_1']; }
 }
 
@@ -442,7 +440,7 @@ window.downloadSticker = async function(url, name) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(blobUrl);
-    showToast("¡Sticker descargado! Agrégalo a WhatsApp con Sticker Maker.");
+    showToast("¡Sticker descargado!");
   } catch(e) {
     window.open(url, '_blank');
   }
@@ -601,7 +599,7 @@ async function refreshRoom(isFirstLoad = false){
        ${cardUsedTag}
        <p style="margin:4px 0">${safe(q.body)}</p>
       </div>
-      ${q.image_url ? `<img src="${q.image_url}" class="${q.image_url.includes('dicebear')?'chat-sticker':'post-img'}" alt="Media">` : ''}
+      ${q.image_url ? `<img src="${q.image_url}" class="chat-sticker" alt="Media">` : ''}
       
       <div class="row" style="margin-top:6px;gap:6px;align-items:center;justify-content:space-between">
         <div style="display:flex;align-items:center;gap:6px">
