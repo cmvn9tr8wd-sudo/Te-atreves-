@@ -50,9 +50,68 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
   display: inline-block;
   animation: bounceEmoji 1.2s infinite ease-in-out;
 }
+
+/* INTRO CREATIVO */
+#introScreen {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle, #2a1550 0%, #100c24 70%);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+#introScreen.fade-out {
+  opacity: 0;
+  transform: scale(1.05);
+  pointer-events: none;
+}
+.intro-title {
+  font-size: clamp(2.8rem, 9vw, 5rem);
+  font-weight: 1000;
+  letter-spacing: -0.05em;
+  background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink));
+  color: transparent;
+  background-clip: text;
+  animation: neonGlow 2s infinite alternate;
+  margin-bottom: 12px;
+}
+.intro-subtitle {
+  color: var(--muted);
+  font-size: clamp(1rem, 3vw, 1.25rem);
+  margin-bottom: 30px;
+}
+.intro-btn {
+  padding: 16px 36px;
+  font-size: 1.15rem;
+  font-weight: 900;
+  border-radius: 99px;
+  background: linear-gradient(100deg, var(--cyan), var(--purple), var(--pink));
+  color: #100c24;
+  box-shadow: 0 0 25px rgba(255, 79, 184, 0.5);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  border: 0;
+}
+.intro-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 35px rgba(103, 232, 249, 0.8);
+}
 </style>
 </head>
 <body>
+
+<!-- INTRO CREATIVO -->
+<div id="introScreen">
+  <div class="intro-title">¿TE ATREVES?</div>
+  <p class="intro-subtitle">Retos extremos, preguntas picantes, cartas y diversión en grupo 🔥</p>
+  <button class="intro-btn" onclick="window.startApp()">¡ENTRAR AL JUEGO! 🚀</button>
+</div>
+
 <div id="toastContainer"></div>
 <main>
 <header class="brand"><div class="logo">¿TE ATREVES?</div><div class="tag">Retos, cartas, estatus VIP y tus stickers 🔥</div></header>
@@ -68,7 +127,19 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 <div class="card">
 <div class="row" style="justify-content:space-between"><div><span class="pill">TU PERFIL</span><h2 style="margin-top:8px">Identidad y Monedas</h2></div><div class="row"><span id="userCoins" class="coins-badge">🪙 50</span><button id="saveProfile" class="secondary" style="padding:8px 12px;font-size:0.85rem">Guardar</button></div></div>
 <label>Tu apodo</label><input id="nickname" maxlength="20" placeholder="Ej. GatoCósmico">
-<label>Elige tu avatar original</label><div id="avatarChoices" class="avatars"></div>
+
+<label>Elige tu avatar original</label>
+<div id="avatarChoices" class="avatars"></div>
+
+<!-- AVATAR PERSONALIZADO -->
+<label style="margin-top:14px">O sube tu propia foto de avatar</label>
+<input type="file" id="customAvatarFile" accept="image/*" style="padding:6px;font-size:0.85rem">
+
+<label>O pega el enlace (URL) de tu imagen</label>
+<div class="row">
+  <input id="customAvatarUrl" placeholder="https://ejemplo.com/mi-foto.jpg" style="flex:1">
+  <button id="applyCustomAvatar" class="secondary" style="padding:10px 14px">Usar</button>
+</div>
 </div>
 
 <div class="card">
@@ -314,6 +385,15 @@ function playFailSound() {
   } catch(e) {}
 }
 
+window.startApp = function() {
+  playSuccessSound();
+  const intro = $("introScreen");
+  if(intro) {
+    intro.classList.add("fade-out");
+    setTimeout(() => { intro.remove(); }, 600);
+  }
+};
+
 window.switchTab = function(tabId, btnElement) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -326,7 +406,11 @@ function status(id, msg, kind="") { const el=$(id); el.textContent=msg; el.class
 function cleanCode(s){return (s||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8)}
 function isUuid(value){return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)}
 
-function getAvatarUrl(seed) { return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(seed)}`; }
+function getAvatarUrl(seed) { 
+  if (seed && seed.startsWith("http")) return seed;
+  if (seed && seed.startsWith("data:image")) return seed;
+  return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(seed || 'Cali')}`; 
+}
 
 function showToast(message) {
   const container = $("toastContainer");
@@ -365,6 +449,28 @@ function loadProfile(){
   makeAvatars();
   renderStickersUI();
 }
+
+$("applyCustomAvatar").onclick = () => {
+  const url = $("customAvatarUrl").value.trim();
+  if(!url) { playFailSound(); alert("Escribe un enlace de imagen válido."); return; }
+  selectedAvatar = url;
+  makeAvatars();
+  playSuccessSound();
+  showToast("Avatar personalizado aplicado.");
+};
+
+$("customAvatarFile").onchange = (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    selectedAvatar = event.target.result;
+    makeAvatars();
+    playSuccessSound();
+    showToast("Foto de avatar cargada con éxito.");
+  };
+  reader.readAsDataURL(file);
+};
 
 function renderStickersUI() {
   const unlocked = getUnlockedStickers();
