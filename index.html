@@ -24,13 +24,32 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 #toastContainer{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;width:92%;max-width:380px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast{background:linear-gradient(135deg,#3b236b,#1e133c);border:1px solid var(--pink);color:var(--text);padding:12px 14px;border-radius:12px;box-shadow:0 6px 24px #0006;pointer-events:auto;animation:slideDown .25s ease;font-size:0.9rem}
 @keyframes slideDown{from{opacity:0;transform:translateY(-15px)}to{opacity:1;transform:translateY(0)}}
-.vip-glow{text-shadow:0 0 8px var(--cyan),0 0 15px var(--pink);font-weight:900}
+
+/* EFECTOS VIP NEÓN Y ANIMACIONES */
+@keyframes neonGlow {
+  0% { text-shadow: 0 0 5px #ff4fb8, 0 0 10px #ff4fb8, 0 0 20px #67e8f9; }
+  50% { text-shadow: 0 0 10px #67e8f9, 0 0 20px #ff4fb8, 0 0 30px #a78bfa; }
+  100% { text-shadow: 0 0 5px #ff4fb8, 0 0 10px #ff4fb8, 0 0 20px #67e8f9; }
+}
+@keyframes bounceEmoji {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px) scale(1.2); }
+}
+.vip-animated-name {
+  animation: neonGlow 2s infinite alternate;
+  color: #fde047 !important;
+  font-weight: 900;
+}
+.vip-emoji {
+  display: inline-block;
+  animation: bounceEmoji 1.2s infinite ease-in-out;
+}
 </style>
 </head>
 <body>
 <div id="toastContainer"></div>
 <main>
-<header class="brand"><div class="logo">¿TE ATREVES?</div><div class="tag">Retos directos, cartas y estatus VIP 🔥</div></header>
+<header class="brand"><div class="logo">¿TE ATREVES?</div><div class="tag">Retos directos, cartas y estatus VIP con efectos 🔥</div></header>
 
 <nav class="nav-tabs">
   <button class="tab-btn active" onclick="window.switchTab('tab-profile', this)">👤 Perfil</button>
@@ -69,10 +88,15 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
   </div>
 
   <div class="card" style="background:#15102d;margin:0">
-  <h3>👑 Tienda de Estatus VIP</h3>
-  <p class="muted" style="font-size:0.85rem">Destaca en la sala con títulos y efectos de neón en tus mensajes.</p>
+  <h3>👑 Tienda de Estatus VIP & Neón</h3>
+  <p class="muted" style="font-size:0.85rem">Desbloquea neón, emojis animados y sonido especial (🪙 100).</p>
   <div id="myVipStatus"><p class="muted">Sin rango VIP activo.</p></div>
   <button id="buyVipBtn" class="secondary" style="margin-top:8px;width:100%;background:linear-gradient(100deg,#f59e0b,#ef4444);color:#fff">Desbloquear Rango VIP (🪙 100)</button>
+  <div id="vipCustomBox" class="hidden" style="margin-top:10px">
+    <label>Personalizar título VIP con emojis (<span style="color:var(--gold)">🪙 50</span>)</label>
+    <input id="vipCustomText" maxlength="15" placeholder="Ej. ⚡ Rey 🔥">
+    <button id="saveVipCustomBtn" class="secondary" style="margin-top:6px;width:100%;font-size:0.8rem">Actualizar Título (🪙 50)</button>
+  </div>
   </div>
 </div>
 
@@ -156,6 +180,30 @@ function getVipStatus() {
   try {
     return localStorage.getItem("ta_vip_active") === "true";
   } catch(e) { return false; }
+}
+
+function getVipTitle() {
+  try {
+    return localStorage.getItem("ta_vip_title") || "👑 VIP ⚡";
+  } catch(e) { return "👑 VIP ⚡"; }
+}
+
+// SINTETIZADOR DE SONIDO VIP (Efecto especial infalible en navegador)
+function playVipSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nota D5
+    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // Sube a A5
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+  } catch(e) {}
 }
 
 window.switchTab = function(tabId, btnElement) {
@@ -265,7 +313,10 @@ async function openRoom(id,code,name){
  await refreshRoom(true);
  if(roomChannel) await supabase.removeChannel(roomChannel);
  roomChannel=supabase.channel("room-"+id)
-   .on("postgres_changes",{event:"*",schema:"public",table:"game_questions",filter:"room_id=eq."+id},() => refreshRoom(false))
+   .on("postgres_changes",{event:"*",schema:"public",table:"game_questions",filter:"room_id=eq."+id},payload => {
+     if(payload.new && payload.new.nickname && payload.new.nickname.includes("VIP")) { playVipSound(); }
+     refreshRoom(false);
+   })
    .on("postgres_changes",{event:"*",schema:"public",table:"game_comments"},() => refreshRoom(false))
    .on("postgres_changes",{event:"*",schema:"public",table:"game_members",filter:"room_id=eq."+id},() => refreshRoom(false))
    .subscribe();
@@ -314,6 +365,12 @@ async function refreshRoom(isFirstLoad = false){
     
     const isClaimed = q.reward_claimed === true || q.reward_claimed === "true" || processedLocally.has(q.id);
 
+    // Aplicar efectos visuales dinámicos si el autor es VIP
+    let authorDisplay = safe(q.nickname);
+    if(authorDisplay.includes("VIP")) {
+      authorDisplay = `<span class="vip-animated-name">${authorDisplay} <span class="vip-emoji">🔥</span></span>`;
+    }
+
     let cardButtonsHtml = '';
     if(!isClaimed && myCards.length > 0) {
       cardButtonsHtml = `<div style="margin-top:8px;padding:8px;background:#100c24;border-radius:10px">
@@ -353,7 +410,7 @@ async function refreshRoom(isFirstLoad = false){
       <div class="row" style="margin-top:6px;gap:6px;align-items:center;justify-content:space-between">
         <div style="display:flex;align-items:center;gap:6px">
           <img src="${safe(q.avatar)}" style="width:20px;height:20px;border-radius:50%" alt="av">
-          <span class="tiny">Por ${safe(q.nickname)}</span>
+          <span class="tiny">Por ${authorDisplay}</span>
         </div>
         <div id="action-area-${q.id}">
           ${rewardActionHtml}
@@ -387,12 +444,20 @@ async function refreshRoom(isFirstLoad = false){
    </div>
   `).join("") : '<span class="muted" style="font-size:0.85rem">No tienes cartas activas.</span>';
 
-  $("myVipStatus").innerHTML = isVip ? `
-   <div class="card-item" style="border-color:var(--gold);background:linear-gradient(135deg,#3b2712,#1a1309)">
-    <strong style="color:var(--gold)">👑 Rango VIP Activo</strong><br>
-    <span class="muted" style="font-size:0.8rem">Efecto de neón y título de Leyenda desbloqueados.</span>
-   </div>
-  ` : '<span class="muted" style="font-size:0.85rem">No has adquirido el rango VIP.</span>';
+  if (isVip) {
+    $("myVipStatus").innerHTML = `
+     <div class="card-item" style="border-color:var(--gold);background:linear-gradient(135deg,#3b2712,#1a1309)">
+      <strong class="vip-animated-name">${safe(getVipTitle())} <span class="vip-emoji">✨</span></strong><br>
+      <span class="muted" style="font-size:0.8rem">Efecto neón, emojis animados y sonido VIP activos.</span>
+     </div>
+    `;
+    $("buyVipBtn").classList.add("hidden");
+    $("vipCustomBox").classList.remove("hidden");
+  } else {
+    $("myVipStatus").innerHTML = '<span class="muted" style="font-size:0.85rem">No has adquirido el rango VIP.</span>';
+    $("buyVipBtn").classList.remove("hidden");
+    $("vipCustomBox").classList.add("hidden");
+  }
 
  }catch(e){console.error(e)}
 }
@@ -601,10 +666,37 @@ $("buyVipBtn").onclick = async function(){
     await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", user.id);
     
     localStorage.setItem("ta_vip_active", "true");
+    playVipSound();
     alert("¡Felicidades! Has desbloqueado el Rango VIP 👑.");
     refreshRoom(false);
   } catch(e) {
     alert("Error al comprar VIP: " + e.message);
+  }
+};
+
+$("saveVipCustomBtn").onclick = async function(){
+  if(!currentRoom) return;
+  const custom = $("vipCustomText").value.trim();
+  if(!custom) { alert("Escribe un título VIP válido."); return; }
+  if(profile.coins < 50) { alert("No tienes suficientes monedas (necesitas 🪙 50)."); return; }
+
+  try {
+    const {data: curMem, error: errGet} = await supabase.from("game_members").select("coins").eq("room_id", currentRoom.id).eq("user_id", user.id).single();
+    if(errGet) throw errGet;
+    
+    const realCoins = curMem ? (curMem.coins || 150) : profile.coins;
+    if(realCoins < 50) { alert("No tienes suficientes monedas."); return; }
+
+    const newCoins = realCoins - 50;
+    await supabase.from("game_members").update({coins: newCoins}).eq("room_id", currentRoom.id).eq("user_id", user.id);
+
+    localStorage.setItem("ta_vip_title", custom);
+    $("vipCustomText").value = "";
+    playVipSound();
+    alert("¡Título VIP actualizado con éxito!");
+    refreshRoom(false);
+  } catch(e) {
+    alert("Error al actualizar título: " + e.message);
   }
 };
 
@@ -636,7 +728,7 @@ async function postQuestion(){
   }
   
   let authorName = profile.name;
-  if(getVipStatus()) { authorName = "👑 " + profile.name + " [VIP]"; }
+  if(getVipStatus()) { authorName = getVipTitle() + " " + profile.name + " [VIP]"; }
 
   const {error}=await supabase.from("game_questions").insert({
     room_id: currentRoom.id, 
@@ -655,6 +747,7 @@ async function postQuestion(){
   $("qText").value=""; $("presetSelector").value=""; fileInput.value="";
   window.cancelTarget();
   status("roomMsg","¡Publicado con éxito!","ok");
+  playVipSound();
   refreshRoom(false);
  }catch(e){status("roomMsg","Error al publicar: "+e.message,"error")}
 }
