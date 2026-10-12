@@ -556,7 +556,7 @@ async function refreshRoom(isFirstLoad = false){
 
   const me = members.find(m => m.user_id === user.id);
   if(me) { 
-    profile.coins = me.coins !== undefined ? me.coins : 150; 
+    profile.coins = me.coins !== undefined ? me.coins : 50; 
     $("userCoins").textContent = "🪙 " + profile.coins; 
   }
 
@@ -589,7 +589,7 @@ async function refreshRoom(isFirstLoad = false){
     let rewardActionHtml = '';
     if (!isClaimed) {
       const isReto = q.kind === 'reto';
-      const recompensaTexto = isReto ? '✅ Cumplió (🪙10 o Doble)' : '✅ Cumplió';
+      const recompensaTexto = isReto ? '✅ Cumplió (🪙10 )' : '✅ Cumplió';
       rewardActionHtml = `
         <div class="row" style="gap:4px">
           <button id="btn-rew-${q.id}" class="secondary" style="padding:4px 8px;font-size:0.75rem;background:#10b981;color:#fff" onclick="window.confirmReward('${q.id}')">${recompensaTexto}</button>
