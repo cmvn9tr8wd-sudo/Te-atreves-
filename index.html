@@ -628,7 +628,7 @@ async function openRoom(id,code,name){
            <option value="">✨ Escribir mi propio texto (Libre)...</option>
            <option value="¿Cuál ha sido el momento más vergonzoso de tu vida?">❓ ¿Cuál ha sido el momento más vergonzoso de tu vida?</option>
            <option value="Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?">❓ Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?</option>
-           <option value="¿Cuál es el secreto más grande que le has ocultado a tus padres?">❓ ¿Cuál es el secreto más grande que le has ocultado à tus padres?</option>
+           <option value="¿Cuál es el secreto más grande que le has ocultado a tus padres?">❓ ¿Cuál es el secreto más grande que le has ocultado a tus padres?</option>
            <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">❓ Si tuvieras que casarte con alguien de este grupo, ¿quién sería?</option>
            <option value="¿Cuál ha sido tu peor cita en la vida real?">❓ ¿Cuál ha sido tu peor cita en la vida real?</option>
            <option value="¿Qué es lo más extraño que has comprado en internet a las 3 AM?">❓ ¿Qué es lo más extraño que has comprado en internet a las 3 AM?</option>
@@ -675,11 +675,11 @@ async function openRoom(id,code,name){
        <div id="subtab-duel-${id}" class="sub-tab-content">
          <div class="card" style="background:#15102d;margin-top:10px;text-align:center">
            <h3>⚡ Duelo de Reflejos 1v1</h3>
-           <p class="muted" style="font-size:0.85rem">El primero en presionar el botón cuando aparezca <strong>¡YA!</strong> gana 🪙 30 monedas del bote en vivo.</p>
+           <p class="muted" style="font-size:0.85rem">Lanza un reto de velocidad en vivo para que cualquier jugador de la sala compita por 🪙 30 monedas.</p>
            
-           <div id="duelStatus-${id}" class="status" style="margin:15px 0;font-size:1rem;color:var(--cyan)">Pulsa "Iniciar Duelo" para comenzar la cuenta regresiva.</div>
+           <div id="duelStatus-${id}" class="status" style="margin:15px 0;font-size:1rem;color:var(--cyan)">Pulsa "Lanzar Reto de Duelo" para avisar a todos en la sala.</div>
            
-           <button id="startDuelBtn-${id}" style="width:100%;max-width:280px;background:linear-gradient(100deg,#f59e0b,#ef4444);color:#fff" onclick="window.startDuel('${id}')">⚔️ Iniciar Duelo</button>
+           <button id="startDuelBtn-${id}" style="width:100%;max-width:280px;background:linear-gradient(100deg,#f59e0b,#ef4444);color:#fff" onclick="window.startDuel('${id}')">⚔️ Lanzar Reto de Duelo</button>
            
            <button id="duelClickBtn-${id}" class="hidden" style="width:100%;max-width:280px;height:120px;font-size:1.8rem;background:#10b981;color:#fff;margin:15px auto;border-radius:20px;animation:neonGlow 1s infinite alternate" onclick="window.hitDuel('${id}')">💥 ¡PÚCHALE!</button>
          </div>
@@ -694,6 +694,16 @@ async function openRoom(id,code,name){
  const channel = supabase.channel("room-"+id)
    .on("postgres_changes",{event:"*",schema:"public",table:"game_questions",filter:"room_id=eq."+id},payload => {
      if(payload.new && payload.new.nickname && payload.new.nickname.includes("VIP")) { playVipSound(); }
+     if(payload.new && payload.new.body && payload.new.body.includes("⚔️ ¡DUELO EN VIVO!")) {
+       showToast("¡Alguien lanzó un Duelo 1v1 en la sala! Ve a la pestaña Duelo 1v1.");
+       const statusEl = $(`duelStatus-${id}`);
+       const startBtn = $(`startDuelBtn-${id}`);
+       if(statusEl) {
+         statusEl.textContent = "🔥 ¡DUELO EN CURSO! ¡Entra a la pestaña y presiona rápido!";
+         statusEl.style.color = "var(--good)";
+       }
+       if(startBtn) startBtn.classList.add("hidden");
+     }
      refreshRoom(id, false);
    })
    .on("postgres_changes",{event:"*",schema:"public",table:"game_comments"},() => refreshRoom(id, false))
@@ -711,7 +721,7 @@ async function openRoom(id,code,name){
  await refreshRoom(id, true);
 }
 
-// Funciones para el Duelo 1v1 en Vivo
+// Funciones para el Duelo 1v1 en Vivo sincronizado
 window.startDuel = async function(roomId){
   playSuccessSound();
   const statusEl = $(`duelStatus-${roomId}`);
@@ -719,8 +729,23 @@ window.startDuel = async function(roomId){
   const clickBtn = $(`duelClickBtn-${roomId}`);
   
   startBtn.classList.add("hidden");
-  statusEl.textContent = "Preparándonos... ¡Atentos!";
+  statusEl.textContent = "Avisando a la sala y preparando el duelo...";
   statusEl.style.color = "var(--gold)";
+
+  try {
+    // Publicar en Supabase para notificar en tiempo real a los demás celulares de la sala
+    await supabase.from("game_questions").insert({
+      room_id: roomId, 
+      author_id: user.id, 
+      nickname: profile.name, 
+      avatar: profile.avatar, 
+      kind: 'reto', 
+      body: `⚔️ ¡DUELO EN VIVO lanzado por ${profile.name}! El primero en reaccionar gana 30🪙.`,
+      reward_claimed: true
+    });
+  } catch(e) {
+    console.error(e);
+  }
 
   const delay = Math.floor(Math.random() * 3000) + 2000; // de 2 a 5 segundos aleatorios
 
@@ -746,7 +771,7 @@ window.hitDuel = async function(roomId){
   startBtn.classList.remove("hidden");
   
   playSuccessSound();
-  statusEl.textContent = `🎉 ¡${profile.name} ganó el duelo y se lleva 🪙 30 monedas!`;
+  statusEl.textContent = `🎉 ¡Ganaste el duelo y te llevas 🪙 30 monedas!`;
   statusEl.style.color = "var(--pink)";
   showToast(`¡Ganaste el duelo! Recompensa otorgada.`);
 
