@@ -60,6 +60,10 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
 .intro-title { font-size: clamp(2.8rem, 9vw, 5rem); font-weight: 1000; letter-spacing: -0.05em; background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink)); color: transparent; background-clip: text; animation: neonGlow 2s infinite alternate; margin-bottom: 12px; }
 .intro-subtitle { color: var(--muted); font-size: clamp(1rem, 3vw, 1.25rem); margin-bottom: 30px; }
 .intro-btn { padding: 16px 36px; font-size: 1.15rem; font-weight: 900; border-radius: 99px; background: linear-gradient(100deg, var(--cyan), var(--purple), var(--pink)); color: #100c24; box-shadow: 0 0 25px rgba(255, 79, 184, 0.5); cursor: pointer; border: 0; }
+
+/* MODAL / OVERLAY DE MINI JUEGOS */
+.minigame-overlay { position: fixed; inset: 0; background: rgba(16, 12, 36, 0.92); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(10px); }
+.minigame-box { background: linear-gradient(135deg, #2a1550, #1b1535); border: 2px solid var(--cyan); border-radius: 24px; width: min(480px, 100%); padding: 24px; text-align: center; box-shadow: 0 10px 40px #0009; }
 </style>
 </head>
 <body>
@@ -69,6 +73,9 @@ main{width:min(960px,100%);margin:auto;padding:16px 16px 50px}.brand{text-align:
   <p class="intro-subtitle">Retos extremos, preguntas picantes, cartas y diversión en grupo 🔥</p>
   <button class="intro-btn" onclick="window.startApp()">¡ENTRAR AL JUEGO! 🚀</button>
 </div>
+
+<!-- CONTENEDOR FLOTANTE DE MINI JUEGOS -->
+<div id="minigameContainer"></div>
 
 <div id="toastContainer"></div>
 <main>
@@ -172,7 +179,7 @@ const catalogStickers = [
 ];
 
 let supabase = null, user = null, profile = {name:"",avatar:"",coins:50}, selectedAvatar = "";
-let activeRooms = {}; // { roomId: { id, code, name, channel, timer, lastCount, targetUser, selectedStickerUrl } }
+let activeRooms = {}; 
 
 const processedLocally = new Set(); 
 try {
@@ -401,7 +408,6 @@ function renderStickersUI() {
     }).join('');
   }
 
-  // Actualizar selectores de stickers en salas abiertas
   Object.keys(activeRooms).forEach(roomId => {
     const activeSelector = $(`activeStickerSelector-${roomId}`);
     if(activeSelector) {
@@ -517,7 +523,6 @@ async function joinRoom(){
 
 async function openRoom(id,code,name){
  if(activeRooms[id]) {
-   // Si ya está abierta, solo cambiamos a su pestaña
    window.switchTab('tab-room-' + id, $(`btn-tab-room-${id}`));
    return;
  }
@@ -525,7 +530,6 @@ async function openRoom(id,code,name){
  const tabId = 'tab-room-' + id;
  const btnId = 'btn-tab-room-' + id;
 
- // Crear botón en la barra de navegación superior
  const navContainer = $("navTabsContainer");
  const newBtn = document.createElement("button");
  newBtn.id = btnId;
@@ -534,7 +538,6 @@ async function openRoom(id,code,name){
  newBtn.onclick = () => window.switchTab(tabId, newBtn);
  navContainer.appendChild(newBtn);
 
- // Crear contenido de la pestaña de la sala
  const dynamicContainer = $("dynamicRoomsContainer");
  const newDiv = document.createElement("div");
  newDiv.id = tabId;
@@ -568,8 +571,23 @@ async function openRoom(id,code,name){
        </div>
      </div>
 
-     <h3 style="margin-top:20px">👥 Jugadores conectados (Toca uno para retarlo directamente)</h3>
+     <h3 style="margin-top:20px">👥 Jugadores conectados</h3>
+     <p class="muted" style="font-size:0.85rem">Toca uno para seleccionarlo y retarlo con un Mini Juego (Apuesta: 🪙 10)</p>
      <div id="players-${id}"></div>
+     
+     <div id="minigameTriggerBox-${id}" class="card hidden" style="background:#22153b;border-color:var(--cyan);margin-top:14px">
+       <h3>⚡ Retar a <span id="selectedTargetName-${id}" style="color:var(--cyan)"></span> con Mini Juego</h3>
+       <p class="muted" style="font-size:0.85rem">Apuesta obligatoria: 🪙 10. ¡El ganador se lleva el pozo de 🪙 20!</p>
+       <div class="row" style="margin-top:10px">
+         <button class="secondary" style="background:#10b981;color:#fff;flex:1" onclick="window.launchMinigame('${id}', 'clicker')">⚡ Duelo de Velocidad</button>
+         <button class="secondary" style="background:#a78bfa;color:#180d2a;flex:1" onclick="window.launchMinigame('${id}', 'rps')">✊ Piedra, Papel o Tijera</button>
+       </div>
+       <div class="row" style="margin-top:8px">
+         <button class="secondary" style="background:#fde047;color:#180d2a;flex:1" onclick="window.launchMinigame('${id}', 'trivia')">❓ Trivia Flash</button>
+         <button class="secondary" style="background:#ff4fb8;color:#fff;flex:1" onclick="window.launchMinigame('${id}', 'ruleta')">🎰 Ruleta Rusa de Retos</button>
+       </div>
+     </div>
+
      <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
 
      <h3>🎲 Publicar reto o pregunta</h3>
@@ -586,7 +604,7 @@ async function openRoom(id,code,name){
        <option value="">✨ Escribir mi propio texto (Libre)...</option>
        <option value="¿Cuál ha sido el momento más vergonzoso de tu vida?">❓ ¿Cuál ha sido el momento más vergonzoso de tu vida?</option>
        <option value="Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?">❓ Si pudieras borrar un recuerdo de tu mente, ¿cuál sería?</option>
-       <option value="¿Cuál es el secreto más grande que le has ocultado a tus padres?">❓ ¿Cuál es el secreto más grande que le has ocultado a tus padres?</option>
+       <option value="¿Cuál es el secreto más grande que le has ocultado a tus padres?">❓ ¿Cuál es el secreto más grande que le has ocultado à tus padres?</option>
        <option value="Si tuvieras que casarte con alguien de este grupo, ¿quién sería?">❓ Si tuvieras que casarte con alguien de este grupo, ¿quién sería?</option>
        <option value="¿Cuál ha sido tu peor cita en la vida real?">❓ ¿Cuál ha sido tu peor cita en la vida real?</option>
        <option value="¿Qué es lo más extraño que has comprado en internet a las 3 AM?">❓ ¿Qué es lo más extraño que has comprado en internet a las 3 AM?</option>
@@ -641,6 +659,34 @@ async function openRoom(id,code,name){
  await refreshRoom(id, true);
 }
 
+// ==========================================
+// SISTEMA DE MINI JUEGOS Y RECOMPENSAS
+// ==========================================
+window.selectTarget = function(roomId, userId, nickname){
+  if(!activeRooms[roomId]) return;
+  activeRooms[roomId].targetUser = { id: userId, name: nickname };
+  const nameDisp = $(`targetNameDisp-${roomId}`);
+  const ind = $(`targetIndicator-${roomId}`);
+  if(nameDisp) nameDisp.textContent = nickname;
+  if(ind) ind.classList.remove("hidden");
+
+  const selectedTargetName = $(`selectedTargetName-${roomId}`);
+  const triggerBox = $(`minigameTriggerBox-${roomId}`);
+  if(selectedTargetName) selectedTargetName.textContent = nickname;
+  if(triggerBox) triggerBox.classList.remove("hidden");
+
+  showToast(`Has seleccionado a ${nickname}. ¡Ya puedes retarlo o publicarle!`);
+};
+
+window.cancelTarget = function(roomId){
+  if(!activeRooms[roomId]) return;
+  activeRooms[roomId].targetUser = null;
+  const ind = $(`targetIndicator-${roomId}`);
+  const triggerBox = $(`minigameTriggerBox-${roomId}`);
+  if(ind) ind.classList.add("hidden");
+  if(triggerBox) triggerBox.classList.add("hidden");
+};
+
 window.closeRoomTab = async function(id) {
   if(!activeRooms[id]) return;
   const r = activeRooms[id];
@@ -661,6 +707,192 @@ window.copyRoomInvite = async function(code) {
   try { await navigator.clipboard.writeText(url); playSuccessSound(); showToast("Enlace de invitación copiado."); }
   catch(e) { playFailSound(); showToast("Código: " + code); }
 };
+
+// MOTOR DE MINI JUEGOS INTERACTIVOS CON APUESTA DE 10 MONEDAS
+window.launchMinigame = async function(roomId, gameType) {
+  const rObj = activeRooms[roomId];
+  if(!rObj || !rObj.targetUser) { alert("Selecciona primero a un jugador de la lista."); return; }
+
+  // Validar monedas del usuario actual (Apuesta de entrada: 10 monedas)
+  try {
+    const {data: myMem} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
+    const myCoins = myMem ? (myMem.coins !== undefined ? myMem.coins : 50) : 50;
+    if(myCoins < 10) { playFailSound(); alert("No tienes suficientes monedas para la apuesta (necesitas 🪙 10)."); return; }
+
+    // Descontar apuesta de entrada
+    await supabase.from("game_members").update({coins: myCoins - 10}).eq("room_id", roomId).eq("user_id", user.id);
+    profile.coins = myCoins - 10;
+    $("userCoins").textContent = "🪙 " + profile.coins;
+  } catch(e) {
+    alert("Error al verificar monedas: " + e.message);
+    return;
+  }
+
+  const overlayContainer = $("minigameContainer");
+  overlayContainer.innerHTML = '';
+  
+  const modal = document.createElement("div");
+  modal.className = "minigame-overlay";
+  
+  const targetName = rObj.targetUser.name;
+  let gameHTML = '';
+
+  if (gameType === 'clicker') {
+    let clicks = 0;
+    gameHTML = `
+      <div class="minigame-box">
+        <h2 style="color:var(--cyan)">⚡ DUELO DE VELOCIDAD (TAP WAR)</h2>
+        <p class="muted">¡Toca el botón lo más rápido posible durante 5 segundos!</p>
+        <div style="font-size:2.5rem;font-weight:900;color:var(--gold);margin:16px 0" id="clickCount">0</div>
+        <button id="tapBtn" style="width:100%;padding:20px;font-size:1.4rem;background:linear-gradient(135deg,#10b981,#065f46);color:#fff">¡TOCA RÁPIDO! 🔥</button>
+        <div id="gameTimer" class="tiny muted" style="margin-top:12px">Tiempo restante: 5s</div>
+      </div>
+    `;
+    modal.innerHTML = gameHTML;
+    overlayContainer.appendChild(modal);
+
+    playSuccessSound();
+    let timeLeft = 5;
+    const timerInterval = setInterval(() => {
+      timeLeft--;
+      const tEl = $("gameTimer");
+      if(tEl) tEl.textContent = `Tiempo restante: ${timeLeft}s`;
+      if(timeLeft <= 0) {
+        clearInterval(timerInterval);
+        finishMinigame(roomId, clicks, 25, `🏆 ¡${profile.name} venció a ${targetName} en el Duelo de Velocidad con ${clicks} clics! (+🪙20 Pozo)`);
+      }
+    }, 1000);
+
+    $("tapBtn").onclick = () => {
+      clicks++;
+      if($("clickCount")) $("clickCount").textContent = clicks;
+      if(navigator.vibrate) navigator.vibrate(40);
+    };
+
+  } else if (gameType === 'rps') {
+    gameHTML = `
+      <div class="minigame-box">
+        <h2 style="color:var(--purple)">✊ PIEDRA, PAPEL O TIJERA EXTREMO</h2>
+        <p class="muted">Elige tu arma contra ${targetName}:</p>
+        <div class="row" style="justify-content:center;margin-top:20px;gap:12px">
+          <button class="secondary" style="padding:16px;font-size:1.5rem" onclick="window.resolveRPS('${roomId}', 'Piedra', '${targetName}')">ROCK ✊</button>
+          <button class="secondary" style="padding:16px;font-size:1.5rem" onclick="window.resolveRPS('${roomId}', 'Papel', '${targetName}')">PAPER 📄</button>
+          <button class="secondary" style="padding:16px;font-size:1.5rem" onclick="window.resolveRPS('${roomId}', 'Tijera', '${targetName}')">SCISSORS ✂️</button>
+        </div>
+      </div>
+    `;
+    modal.innerHTML = gameHTML;
+    overlayContainer.appendChild(modal);
+    playSuccessSound();
+
+  } else if (gameType === 'trivia') {
+    gameHTML = `
+      <div class="minigame-box">
+        <h2 style="color:var(--gold)">❓ TRIVIA FLASH DE REFLEJOS</h2>
+        <p style="font-weight:bold;margin:12px 0">¿Cuál es el lenguaje de programación principal para dar estilo visual a las páginas web?</p>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+          <button class="secondary" onclick="window.resolveTrivia('${roomId}', false, '${targetName}')">A) Python</button>
+          <button class="secondary" onclick="window.resolveTrivia('${roomId}', true, '${targetName}')">B) CSS (Hojas de Estilo)</button>
+          <button class="secondary" onclick="window.resolveTrivia('${roomId}', false, '${targetName}')">C) SQL</button>
+        </div>
+      </div>
+    `;
+    modal.innerHTML = gameHTML;
+    overlayContainer.appendChild(modal);
+    playSuccessSound();
+
+  } else if (gameType === 'ruleta') {
+    const punishments = [
+      "Mandar un audio cantando una ópera al chat familiar",
+      "Dejar que el grupo ponga un estado de WhatsApp vergonzoso",
+      "Hablar con acento de pirata durante los próximos 10 minutos",
+      "Mostrar la galería de fotos empezando desde la foto número 100"
+    ];
+    const chosenP = punishments[Math.floor(Math.random() * punishments.length)];
+    finishMinigame(roomId, 10, 20, `🎰 Ruleta Rusa: ¡${targetName} cayó en el reto extremo: "${chosenP}"!`);
+  }
+};
+
+window.resolveRPS = async function(roomId, myChoice, targetName) {
+  const options = ['Piedra', 'Papel', 'Tijera'];
+  const rivalChoice = options[Math.floor(Math.random() * options.length)];
+  
+  let msg = '';
+  let won = false;
+  if(myChoice === rivalChoice) {
+    msg = `🤝 Empate en Piedra, Papel o Tijera contra ${targetName} (${myChoice} vs ${rivalChoice}). ¡Se devuelven las monedas!`;
+    // Devolver apuesta
+    const {data: m} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
+    await supabase.from("game_members").update({coins: (m.coins || 50) + 10}).eq("room_id", roomId).eq("user_id", user.id);
+    profile.coins += 10;
+    $("userCoins").textContent = "🪙 " + profile.coins;
+  } else if(
+    (myChoice === 'Piedra' && rivalChoice === 'Tijera') ||
+    (myChoice === 'Papel' && rivalChoice === 'Piedra') ||
+    (myChoice === 'Tijera' && rivalChoice === 'Papel')
+  ) {
+    won = true;
+    msg = `🏆 ¡${profile.name} derrotó a ${targetName} en Piedra, Papel o Tijera (${myChoice} vs ${rivalChoice})! (+🪙20 Pozo)`;
+  } else {
+    msg = `❌ ${targetName} ganó el Piedra, Papel o Tijera (${rivalChoice} contra tu ${myChoice}).`;
+  }
+
+  finishMinigame(roomId, won ? 10 : 0, won ? 20 : 0, msg);
+};
+
+window.resolveTrivia = async function(roomId, isCorrect, targetName) {
+  let msg = '';
+  if(isCorrect) {
+    msg = `🏆 ¡${profile.name} respondió correctamente la Trivia Flash antes que nadie! (+🪙20 Pozo)`;
+    finishMinigame(roomId, 10, 20, msg);
+  } else {
+    playFailSound();
+    msg = `❌ Respuesta incorrecta en la Trivia Flash. Perdiste tu apuesta de 10 monedas.`;
+    finishMinigame(roomId, 0, 0, msg);
+  }
+};
+
+async function finishMinigame(roomId, score, rewardCoins, publicAnnouncement) {
+  $("minigameContainer.minigame-overlay")?.remove();
+  $("minigameContainer").innerHTML = '';
+
+  if(rewardCoins > 0) {
+    playSuccessSound();
+    try {
+      const {data: m} = await supabase.from("game_members").select("coins").eq("room_id", roomId).eq("user_id", user.id).single();
+      const newCoins = (m ? m.coins : profile.coins) + rewardCoins;
+      await supabase.from("game_members").update({coins: newCoins}).eq("room_id", roomId).eq("user_id", user.id);
+      profile.coins = newCoins;
+      $("userCoins").textContent = "🪙 " + profile.coins;
+    } catch(e) {}
+  } else {
+    playFailSideEffect();
+  }
+
+  // Publicar resultado automático en el muro de actividad de la sala
+  try {
+    let authorName = profile.name;
+    if(getVipStatus()) { authorName = getVipTitle() + " " + profile.name + " [VIP]"; }
+
+    await supabase.from("game_questions").insert({
+      room_id: roomId,
+      author_id: user.id,
+      nickname: authorName,
+      avatar: profile.avatar,
+      kind: 'reto',
+      body: publicAnnouncement,
+      reward_claimed: true,
+      applied_card: '⚡ Mini Juego Finalizado'
+    });
+  } catch(e) {}
+
+  showToast("¡Mini juego terminado!");
+  refreshRoom(roomId, false);
+}
+
+function playFailSideEffect() {
+  playFailSound();
+}
 
 async function refreshRoom(id, isFirstLoad = false){
  if(!activeRooms[id])return;
@@ -739,7 +971,6 @@ async function refreshRoom(id, isFirstLoad = false){
         rewardActionHtml = `<span class="tiny muted">Pregunta (Sin monedas)</span>`;
       }
 
-      // Soporte para renderizar imagen o video
       let mediaHtml = '';
       if(q.image_url) {
         if(q.image_url.startsWith("data:video") || q.image_url.includes(".mp4") || q.image_url.includes(".webm")) {
@@ -804,7 +1035,6 @@ async function refreshRoom(id, isFirstLoad = false){
   }
 
   const vipStatus = $(`myVipStatus-${id}`);
-  const vipBtn = $(`buyVipBtn-${id}`);
   const vipBox = $(`vipCustomBox-${id}`);
   if(vipStatus) {
     if (isVip) {
@@ -823,23 +1053,6 @@ async function refreshRoom(id, isFirstLoad = false){
 
  }catch(e){console.error(e)}
 }
-
-window.selectTarget = function(roomId, userId, nickname){
-  if(!activeRooms[roomId]) return;
-  activeRooms[roomId].targetUser = { id: userId, name: nickname };
-  const nameDisp = $(`targetNameDisp-${roomId}`);
-  const ind = $(`targetIndicator-${roomId}`);
-  if(nameDisp) nameDisp.textContent = nickname;
-  if(ind) ind.classList.remove("hidden");
-  showToast(`Has seleccionado a ${nickname} para tu próximo reto.`);
-};
-
-window.cancelTarget = function(roomId){
-  if(!activeRooms[roomId]) return;
-  activeRooms[roomId].targetUser = null;
-  const ind = $(`targetIndicator-${roomId}`);
-  if(ind) ind.classList.add("hidden");
-};
 
 window.applyCardToQuestion = async function(roomId, questionId, cardId, cardName){
   if(!user) { alert("Usuario no conectado."); return; }
@@ -961,7 +1174,6 @@ window.sendComment = async function(roomId, questionId){
 };
 
 window.buyCard = async function(){
-  // Buscar la sala activa actual visible
   const activeTab = document.querySelector('.tab-content.active');
   if(!activeTab || !activeTab.id.startsWith('tab-room-')) { alert("Entra primero a una sala activa."); return; }
   const roomId = activeTab.id.replace('tab-room-', '');
